@@ -15,12 +15,10 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // ✅ Generate a secure key for HS256
     private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
-    private static final long EXPIRATION = 1000 * 60 * 60 * 10; // 10 hours
+    private static final long EXPIRATION = 1000 * 60 * 60 * 10;
 
-    // Generate token with email and role
     public String generateToken(String email, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
@@ -34,22 +32,18 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Extract username/email from token
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // Extract role
     public String extractRole(String token) {
         return extractAllClaims(token).get("role", String.class);
     }
 
-    // Validate token
     public boolean isTokenValid(String token) {
         return !isTokenExpired(token);
     }
 
-    // ===== INTERNAL HELPERS =====
     private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }

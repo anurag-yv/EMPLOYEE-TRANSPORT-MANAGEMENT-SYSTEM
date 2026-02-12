@@ -11,7 +11,7 @@ public class Employee {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;     // ✅ ADD THIS
+    private String name;
     private String email;
     private String password;
 }

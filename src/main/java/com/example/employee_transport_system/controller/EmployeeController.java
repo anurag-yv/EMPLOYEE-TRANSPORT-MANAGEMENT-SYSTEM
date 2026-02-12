@@ -16,13 +16,13 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
 
-    @PreAuthorize("hasRole('ADMIN')") // Only admins can view all employees
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<Employee> getAllEmployees() {
         return employeeService.getAllEmployees();
     }
 
-    @PreAuthorize("hasRole('EMPLOYEE') or hasRole('ADMIN')") // Employee can view their own
+    @PreAuthorize("hasRole('EMPLOYEE') or hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<Employee> getEmployeeById(@PathVariable Long id) {
         return ResponseEntity.ok(employeeService.getEmployeeById(id));

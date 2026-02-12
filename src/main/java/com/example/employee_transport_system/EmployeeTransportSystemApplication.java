@@ -36,7 +36,6 @@ public class EmployeeTransportSystemApplication implements CommandLineRunner {
             adminRepo.save(admin);
         }
 
-        // Seed Employee
         if (employeeRepo.findByEmail("employee@test.com").isEmpty()) {
             Employee emp = new Employee();
             emp.setEmail("employee@test.com");

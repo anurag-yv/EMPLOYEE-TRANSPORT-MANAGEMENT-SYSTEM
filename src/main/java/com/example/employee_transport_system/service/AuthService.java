@@ -23,7 +23,6 @@ public class AuthService {
 
     public AuthResponse authenticate(AuthRequest request) {
 
-        // Try Employee first
         Employee employee = employeeRepo.findByEmail(request.getEmail())
                 .orElse(null);
 
@@ -32,7 +31,6 @@ public class AuthService {
             return new AuthResponse(token);
         }
 
-        // Try Admin
         Admin admin = adminRepo.findByEmail(request.getEmail())
                 .orElse(null);
 
@@ -41,7 +39,7 @@ public class AuthService {
             return new AuthResponse(token);
         }
 
-        // ⚠️ If neither matches → throw proper exception
+
         throw new BadCredentialsException("Invalid email or password");
     }
 }
