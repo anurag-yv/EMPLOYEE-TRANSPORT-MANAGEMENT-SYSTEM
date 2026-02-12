@@ -1,6 +1,7 @@
 Employee Transport Management System
 
-Overview
+Overview:
+
 This is a Spring Boot-based backend application for managing employee transportation. It provides functionalities for scheduling routes and trips, booking seats, and handling user authentication with JWT and role-based security. The system supports two main roles: Admin and Employee.
 Admins can manage routes, employees, and bookings, while employees can view and book available routes.
 Features
