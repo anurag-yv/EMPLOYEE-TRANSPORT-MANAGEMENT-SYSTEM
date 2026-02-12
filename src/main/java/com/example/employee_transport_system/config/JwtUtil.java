@@ -1,30 +1,73 @@
 package com.example.employee_transport_system.config;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
+
+import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 @Component
 public class JwtUtil {
-    private final String secret = "secretkey123";
-    private final long expiration = 1000 * 60 * 60; // 1 hour
 
-    public String generateToken(String username, String role) {
+    // ✅ Generate a secure key for HS256
+    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+
+    private static final long EXPIRATION = 1000 * 60 * 60 * 10; // 10 hours
+
+    // Generate token with email and role
+    public String generateToken(String email, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
+
         return Jwts.builder()
-                .setSubject(username)
-                .claim("role", role)
+                .setClaims(claims)
+                .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(SignatureAlgorithm.HS256, secret)
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .signWith(SECRET_KEY)
                 .compact();
     }
 
+    // Extract username/email from token
     public String extractUsername(String token) {
-        return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody().getSubject();
+        return extractClaim(token, Claims::getSubject);
     }
 
+    // Extract role
     public String extractRole(String token) {
-        return (String) Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody().get("role");
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    // Validate token
+    public boolean isTokenValid(String token) {
+        return !isTokenExpired(token);
+    }
+
+    // ===== INTERNAL HELPERS =====
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
+    }
+
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    private <T> T extractClaim(String token, Function<Claims, T> resolver) {
+        final Claims claims = extractAllClaims(token);
+        return resolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(SECRET_KEY)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

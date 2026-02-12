@@ -1,9 +1,13 @@
 package com.example.employee_transport_system.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuthRequest {
-    private String usernameOrEmail;
+    private String email;
     private String password;
 }

@@ -8,6 +8,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+
 public class Booking {
 
     @Id
@@ -15,8 +16,10 @@ public class Booking {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     @ManyToOne
+    @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 }

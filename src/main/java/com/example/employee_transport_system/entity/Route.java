@@ -3,23 +3,24 @@ package com.example.employee_transport_system.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.List;
-
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+
 public class Route {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String origin;
-    private String destination;
-    private int capacity;
+    @Column(nullable = false)
+    private String fromLocation;
 
-    @OneToMany(mappedBy = "route")
-    private List<Booking> bookings;
+    @Column(nullable = false)
+    private String toLocation;
+
+    @Column(nullable = false)
+    private Integer capacity;
 }
