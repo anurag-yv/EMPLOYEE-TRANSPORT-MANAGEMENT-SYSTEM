@@ -10,11 +10,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@SpringBootApplication(
-        exclude = {
-                org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration.class
-        }
-)
+@SpringBootApplication
 @RequiredArgsConstructor
 public class EmployeeTransportSystemApplication implements CommandLineRunner {
 
@@ -27,8 +23,7 @@ public class EmployeeTransportSystemApplication implements CommandLineRunner {
     }
 
     @Override
-    public void run(String... args) throws Exception {
-        // Seed Admin
+    public void run(String... args) {
         if (adminRepo.findByEmail("admin@test.com").isEmpty()) {
             Admin admin = new Admin();
             admin.setEmail("admin@test.com");

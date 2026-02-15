@@ -1,6 +1,5 @@
 package com.example.employee_transport_system.service;
 
-import com.example.employee_transport_system.dto.BookingDTO;
 import com.example.employee_transport_system.entity.Booking;
 import com.example.employee_transport_system.entity.Employee;
 import com.example.employee_transport_system.entity.Route;
@@ -9,12 +8,14 @@ import com.example.employee_transport_system.repository.EmployeeRepository;
 import com.example.employee_transport_system.repository.RouteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class BookingService {
+
     private final BookingRepository bookingRepo;
     private final EmployeeRepository employeeRepo;
     private final RouteRepository routeRepo;
@@ -23,26 +24,36 @@ public class BookingService {
         return bookingRepo.findAll();
     }
 
-    public Booking getBookingById(Long id) {
-        return bookingRepo.findById(id).orElseThrow(() -> new RuntimeException("Booking not found"));
-    }
+    @Transactional
+    public Booking bookSeat(Long employeeId, Long routeId) {
 
-    public Booking createBooking(BookingDTO dto) {
-        Employee employee = employeeRepo.findById(dto.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        Employee employee = employeeRepo.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + employeeId));
 
-        Route route = routeRepo.findById(dto.getRouteId())
-                .orElseThrow(() -> new RuntimeException("Route not found"));
+        Route route = routeRepo.findById(routeId)
+                .orElseThrow(() -> new RuntimeException("Route not found with id: " + routeId));
 
-        Booking booking = Booking.builder()
-                .employee(employee)
-                .route(route)
-                .build();
+        if (bookingRepo.existsByEmployeeAndRoute(employee, route)) {
+            throw new RuntimeException("Employee already booked this route");
+        }
+
+        int bookedSeats = bookingRepo.countByRoute(route);
+        if (bookedSeats >= route.getCapacity()) {
+            throw new RuntimeException("Route is full");
+        }
+
+        Booking booking = new Booking();
+        booking.setEmployee(employee);
+        booking.setRoute(route);
 
         return bookingRepo.save(booking);
     }
 
-    public void deleteBooking(Long id) {
-        bookingRepo.deleteById(id);
+    @Transactional
+    public void cancelBooking(Long bookingId) {
+        if (!bookingRepo.existsById(bookingId)) {
+            throw new RuntimeException("Booking not found with id: " + bookingId);
+        }
+        bookingRepo.deleteById(bookingId);
     }
 }

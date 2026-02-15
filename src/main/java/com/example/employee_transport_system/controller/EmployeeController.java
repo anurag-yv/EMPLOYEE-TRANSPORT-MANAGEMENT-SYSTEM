@@ -2,41 +2,45 @@ package com.example.employee_transport_system.controller;
 
 import com.example.employee_transport_system.entity.Employee;
 import com.example.employee_transport_system.service.EmployeeService;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/employees")
-@RequiredArgsConstructor
+@RequestMapping("/employees")
 public class EmployeeController {
 
-    private final EmployeeService employeeService;
+    @Autowired
+    private EmployeeService employeeService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @GetMapping
-    public List<Employee> getAllEmployees() {
-        return employeeService.getAllEmployees();
+    public ResponseEntity<List<Employee>> getAllEmployees() {
+        return ResponseEntity.ok(employeeService.getAllEmployees());
     }
 
-    @PreAuthorize("hasRole('EMPLOYEE') or hasRole('ADMIN')")
     @GetMapping("/{id}")
-    public ResponseEntity<Employee> getEmployeeById(@PathVariable Long id) {
-        return ResponseEntity.ok(employeeService.getEmployeeById(id));
+    public ResponseEntity<Employee> getEmployee(@PathVariable Long id) {
+        return employeeService.getEmployeeById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public Employee createEmployee(@RequestBody Employee employee) {
-        return employeeService.createEmployee(employee);
-    }
+    public ResponseEntity<Employee> addEmployee(
+            @Valid @RequestBody Employee employee
+    ) {
+        // encode password
+        employee.setPassword(passwordEncoder.encode(employee.getPassword()));
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/{id}")
-    public void deleteEmployee(@PathVariable Long id) {
-        employeeService.deleteEmployee(id);
+        Employee saved = employeeService.saveEmployee(employee);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 }

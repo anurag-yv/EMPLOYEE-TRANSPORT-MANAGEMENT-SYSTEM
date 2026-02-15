@@ -1,14 +1,10 @@
 package com.example.employee_transport_system.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
 
 @Entity
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-
 public class Booking {
 
     @Id
@@ -16,10 +12,10 @@ public class Booking {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     private Employee employee;
 
     @ManyToOne
-    @JoinColumn(name = "route_id", nullable = false)
+    @JoinColumn(name = "route_id")
     private Route route;
 }

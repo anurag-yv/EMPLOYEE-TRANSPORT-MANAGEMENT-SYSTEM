@@ -1,32 +1,35 @@
 package com.example.employee_transport_system.controller;
 
-import com.example.employee_transport_system.dto.RouteDTO;
 import com.example.employee_transport_system.entity.Route;
-import com.example.employee_transport_system.service.RouteService;
-import lombok.RequiredArgsConstructor;
+import com.example.employee_transport_system.repository.RouteRepository;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/routes")
-@RequiredArgsConstructor
+@RequestMapping("/routes")
 public class RouteController {
 
-    private final RouteService routeService;
+    private final RouteRepository routeRepository;
+
+    public RouteController(RouteRepository routeRepository) {
+        this.routeRepository = routeRepository;
+    }
 
     @GetMapping
     public List<Route> getAllRoutes() {
-        return routeService.getAllRoutes();
+        return routeRepository.findAll();
     }
 
     @GetMapping("/{id}")
     public Route getRouteById(@PathVariable Long id) {
-        return routeService.getRouteById(id);
+        return routeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Route not found"));
     }
 
     @PostMapping
-    public Route createRoute(@RequestBody RouteDTO routeDTO) {
-        return routeService.createRoute(routeDTO);
+    public Route addRoute(@Valid @RequestBody Route route) {
+        return routeRepository.save(route);
     }
 }
