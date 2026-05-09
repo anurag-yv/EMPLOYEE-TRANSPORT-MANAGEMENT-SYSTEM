@@ -65,7 +65,7 @@ const Register = () => {
                                     <label className="input-label">Full Name</label>
                                     <div className="input-container">
                                         <User className="input-icon" size={17} />
-                                        <input className="uber-input" placeholder="John Doe" value={formData.name}
+                                        <input className="uber-input" value={formData.name}
                                             onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                                     </div>
                                 </div>
@@ -74,7 +74,7 @@ const Register = () => {
                                     <label className="input-label">Work Email</label>
                                     <div className="input-container">
                                         <Mail className="input-icon" size={17} />
-                                        <input type="email" className="uber-input" placeholder="name@company.com"
+                                        <input type="email" className="uber-input"
                                             value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required />
                                     </div>
                                 </div>
@@ -83,7 +83,7 @@ const Register = () => {
                                     <label className="input-label">Password</label>
                                     <div className="input-container">
                                         <Lock className="input-icon" size={17} />
-                                        <input type="password" className="uber-input" placeholder="••••••••"
+                                        <input type="password" className="uber-input"
                                             value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} required />
                                     </div>
                                 </div>

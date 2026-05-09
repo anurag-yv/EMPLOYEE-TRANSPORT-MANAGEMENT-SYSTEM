@@ -61,7 +61,6 @@ const Login = () => {
                                 <input
                                     type="email"
                                     className="uber-input"
-                                    placeholder="name@company.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
@@ -76,7 +75,6 @@ const Login = () => {
                                 <input
                                     type="password"
                                     className="uber-input"
-                                    placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
