@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: employee-transport-api
+    env: docker
+    region: ohio
+    plan: free
+    rootDir: ./employee-transport-system
+    dockerCommand: java -jar app.jar
+    branch: main
+    repo: https://github.com/yourusername/employee-transport-system
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:h2:mem:testdb
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+  - type: static
+    name: employee-transport-ui
+    env: static
+    region: ohio
+    plan: free
+    rootDir: ./frontend
+    buildCommand: npm install ; npm run build
+    staticPublishPath: ./dist
+    branch: main
+    repo: https://github.com/yourusername/employee-transport-system
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://employee-transport-api.onrender.com
