@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Bus, LogOut, Search, Clock, MapPin, Navigation, History, Shield, Menu, ArrowRight, RefreshCw, Star, CheckCircle2, ShieldCheck, Zap, ChevronRight, AlertTriangle, Phone, X, XCircle } from 'lucide-react';
+import { Bus, LogOut, Search, Clock, MapPin, Navigation, History, Shield, Menu, ArrowRight, RefreshCw, Star, CheckCircle2, ShieldCheck, Zap, ChevronRight, AlertTriangle, Phone, X, XCircle, MessageSquare, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { parseJwt } from '../utils/jwt';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -11,18 +11,22 @@ const POLL_INTERVAL = 15000;
 export default function Dashboard() {
   const [routes, setRoutes] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
+  const [myAlerts, setMyAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(null);
   const [search, setSearch] = useState('');
+  const [mapSearch, setMapSearch] = useState('');
   const [analyticsData, setAnalyticsData] = useState(null);
-  const [userName, setUserName] = useState('Employee');
+  const [userName, setUserName] = useState('User');
+  const [userRole, setUserRole] = useState('EMPLOYEE');
   const [tab, setTab] = useState('commute');
   const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [sosActive, setSosActive] = useState(false);
   const [locationShared, setLocationShared] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showMap, setShowMap] = useState(false);
   const pollRef = useRef(null);
   const navigate = useNavigate();
 
@@ -36,11 +40,14 @@ export default function Dashboard() {
       const [r, b, a] = await Promise.all([
         api.get('/api/routes'), 
         api.get('/api/booking/my'),
-        api.get('/api/analytics/dashboard').catch(() => ({ data: null }))
+        api.get('/api/alerts/my')
       ]);
       setRoutes(Array.isArray(r.data) ? r.data : []);
       setMyBookings(Array.isArray(b.data) ? b.data : []);
-      if (a.data) setAnalyticsData(a.data);
+      setMyAlerts(Array.isArray(a.data) ? a.data : []);
+      
+      // Fetch analytics only if user is NOT a citizen/employee who doesn't need global stats
+      // (Though currently we don't show global stats to them anymore)
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -48,16 +55,41 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/login'); return; }
-    try { const u = parseJwt(token); if (u?.sub) setUserName(u.sub.split('@')[0]); } catch (e) {}
+    try { 
+      const u = parseJwt(token); 
+      if (u?.sub) setUserName(u.sub.split('@')[0]); 
+      if (u?.role) {
+        setUserRole(u.role);
+        if (u.role === 'EMPLOYEE' && tab === 'commute') {
+          setTab('history');
+        }
+      }
+    } catch (e) {}
     fetchData();
     pollRef.current = setInterval(fetchData, POLL_INTERVAL);
     const clock = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => { clearInterval(pollRef.current); clearInterval(clock); };
   }, [navigate, fetchData]);
 
-  const handleBook = async (routeId) => {
-    setBookingLoading(routeId);
-    try { await api.post('/api/booking', { routeId }); await fetchData(); showToast('Ride booked! 🎉'); }
+  const [bookingModal, setBookingModal] = useState(null); // stores the route to book
+  const [seatCount, setSeatCount] = useState(1);
+  const [passengerDetails, setPassengerDetails] = useState('');
+
+  const handleBook = async () => {
+    if (!bookingModal) return;
+    setBookingLoading(bookingModal.id);
+    try { 
+      await api.post('/api/booking', { 
+        routeId: bookingModal.id,
+        numberOfSeats: seatCount,
+        passengerDetails: passengerDetails
+      }); 
+      await fetchData(); 
+      showToast(`Successfully booked ${seatCount} seat(s)! 🎉`); 
+      setBookingModal(null);
+      setSeatCount(1);
+      setPassengerDetails('');
+    }
     catch (e) { showToast(e.response?.data?.message || 'Booking failed.', 'error'); }
     finally { setBookingLoading(null); }
   };
@@ -69,6 +101,7 @@ export default function Dashboard() {
     catch (e) { showToast('Cancel failed.', 'error'); }
     finally { setCancelLoading(null); }
   };
+
 
   const handleSOS = async () => {
     setSosActive(true);
@@ -98,11 +131,30 @@ export default function Dashboard() {
     );
   };
 
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportLoading, setSupportLoading] = useState(false);
+
+  const handleSupportSubmit = async (e) => {
+    e.preventDefault();
+    if (!supportMessage.trim()) return;
+    setSupportLoading(true);
+    try {
+      await api.post('/api/alerts', { type: 'QUERY', message: supportMessage, location: 'Help Desk' });
+      showToast('Query submitted successfully! Admin will respond soon.');
+      setSupportMessage('');
+    } catch (err) {
+      showToast('Failed to submit query.', 'error');
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
   const navItems = [
-    { id: 'commute', label: 'Commute', icon: MapPin },
+    ...(userRole === 'CITIZEN' ? [{ id: 'commute', label: 'Commute', icon: MapPin }] : []),
     { id: 'history', label: 'My Rides', icon: History },
     { id: 'safety', label: 'Safety Hub', icon: Shield },
-    { id: 'analytics', label: 'Analytics', icon: Zap },
+    { id: 'support', label: 'Help Desk', icon: MessageSquare },
+    ...(userRole === 'EMPLOYEE' ? [{ id: 'analytics', label: 'Analytics', icon: Zap }] : [])
   ];
 
   const filtered = routes.filter(r => r.destination?.toLowerCase().includes(search.toLowerCase()) || r.source?.toLowerCase().includes(search.toLowerCase()));
@@ -161,7 +213,7 @@ export default function Dashboard() {
         <div className="page-container">
           <div className="page-header">
             <div>
-              <h1 className="page-title">Hi, {userName} 👋</h1>
+              <h1 className="page-title">Hi, {userName}</h1>
               <p className="page-subtitle">{currentTime.toLocaleTimeString()} · {currentTime.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' })}</p>
             </div>
             <div className="header-actions">
@@ -282,7 +334,8 @@ export default function Dashboard() {
 
                         <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', fontSize:'0.8rem', color:'#94a3b8' }}>
                           <span style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}><Clock size={13} style={{ color:'#6366f1' }} />{route.pickupTime}</span>
-                          <span style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}><Star size={13} style={{ color:'#f59e0b' }} />{seatsLeft} seats available</span>
+                          <span style={{ display:'flex', alignItems:'center', gap:'0.35rem' }}><Star size={13} style={{ color:'#f59e0b' }} />{seatsLeft} seats</span>
+                          <span style={{ fontWeight: 800, color: '#10b981' }}>${route.budget || '0.00'} / Trip</span>
                         </div>
 
                         <div>
@@ -295,11 +348,11 @@ export default function Dashboard() {
                           </div>
                         </div>
 
-                        <button onClick={() => !alreadyBooked && !isFull && handleBook(route.id)}
+                        <button onClick={() => !alreadyBooked && !isFull && setBookingModal(route)}
                           disabled={isFull || alreadyBooked || bookingLoading === route.id}
                           style={{ width:'100%', padding:'0.75rem', borderRadius:12, border:'none', cursor: isFull||alreadyBooked ? 'not-allowed':'pointer',
-                            background: alreadyBooked ? 'rgba(16,185,129,0.1)' : isFull ? 'rgba(255,255,255,0.04)' : 'white',
-                            color: alreadyBooked ? '#10b981' : isFull ? '#64748b' : 'black',
+                            background: alreadyBooked ? 'rgba(16,185,129,0.1)' : isFull ? 'rgba(0,0,0,0.04)' : '#111827',
+                            color: alreadyBooked ? '#10b981' : isFull ? '#64748b' : 'white',
                             fontWeight:700, fontSize:'0.875rem', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem',
                             transition:'all 0.2s', border: alreadyBooked ? '1px solid rgba(16,185,129,0.3)' : 'none' }}>
                           {bookingLoading === route.id ? <RefreshCw size={16} style={{ animation:'spin 1s linear infinite' }} /> :
@@ -450,50 +503,246 @@ export default function Dashboard() {
             </motion.div>
           )}
 
+          {/* SUPPORT TAB */}
+          {tab === 'support' && (
+            <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}>
+              <div style={{ marginBottom:'1.75rem' }}>
+                <h3 style={{ fontSize:'1.75rem', fontWeight:900, letterSpacing:'-0.03em' }}>Help Desk</h3>
+                <p className="section-sub">Submit your queries or issues to the administration</p>
+              </div>
+
+              <div className="glass-card" style={{ marginBottom: '2rem' }}>
+                <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                    <h4 style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <MapPin size={18} style={{ color: '#6366f1' }} /> Transit Network Map
+                    </h4>
+                    <button className="uber-btn-plain" onClick={() => setShowMap(!showMap)}>
+                        {showMap ? 'Hide Map' : 'View Network'}
+                    </button>
+                </div>
+
+                <AnimatePresence>
+                    {showMap && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: '350px', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden', position: 'relative', borderRadius: '16px', background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div style={{ position: 'absolute', top: '1rem', left: '1rem', zIndex: 10, width: '240px' }}>
+                                <div className="input-container" style={{ background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(8px)' }}>
+                                    <Search size={14} style={{ marginLeft: '0.75rem' }} />
+                                    <input 
+                                        className="uber-input-plain" 
+                                        placeholder="Search locations..." 
+                                        style={{ height: '36px', fontSize: '0.8rem' }}
+                                        value={mapSearch}
+                                        onChange={e => setMapSearch(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            
+                            {/* Simulated Map Canvas */}
+                            <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+                                <div style={{ position: 'absolute', inset: 0, opacity: 0.1, backgroundImage: 'radial-gradient(circle, #6366f1 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+                                
+                                {/* Route Lines */}
+                                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                                    <line x1="20%" y1="30%" x2="50%" y2="50%" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="5,5" />
+                                    <line x1="80%" y1="20%" x2="50%" y2="50%" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="5,5" />
+                                    <line x1="40%" y1="80%" x2="50%" y2="50%" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="5,5" />
+                                </svg>
+
+                                {/* Markers */}
+                                {[
+                                    { x: '20%', y: '30%', name: 'Terminal A' },
+                                    { x: '80%', y: '20%', name: 'IT Park' },
+                                    { x: '40%', y: '80%', name: 'Suburbs' },
+                                    { x: '50%', y: '50%', name: 'City Center', main: true }
+                                ].map((marker, i) => (
+                                    <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.1 }}
+                                        style={{ position: 'absolute', left: marker.x, top: marker.y, transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                                        <div style={{ width: marker.main ? 24 : 16, height: marker.main ? 24 : 16, borderRadius: '50%', background: marker.main ? '#6366f1' : '#10b981', margin: '0 auto', boxShadow: `0 0 15px ${marker.main ? '#6366f1' : '#10b981'}` }} />
+                                        <p style={{ fontSize: '0.65rem', fontWeight: 800, marginTop: '4px', whiteSpace: 'nowrap', textShadow: '0 2px 4px black' }}>{marker.name}</p>
+                                    </motion.div>
+                                ))}
+                            </div>
+
+                            <div style={{ position: 'absolute', bottom: '1rem', right: '1rem', zIndex: 10 }}>
+                                <button className="uber-btn uber-btn-accent" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }} onClick={() => {
+                                    setSupportMessage(`Requesting a new route from: ${mapSearch || 'Current Selection'} to IT Park`);
+                                    setTab('support');
+                                }}>
+                                    Request Route Here
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+              </div>
+
+              <div className="glass-card">
+                <form onSubmit={handleSupportSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <label style={{ fontWeight: 700, fontSize: '0.875rem' }}>Message Admin</label>
+                  <textarea 
+                    className="uber-input-plain" 
+                    placeholder="Describe your issue, query, or route request here..." 
+                    rows={4} 
+                    value={supportMessage}
+                    onChange={(e) => setSupportMessage(e.target.value)}
+                    style={{ resize: 'vertical' }}
+                    required 
+                  />
+                  <button 
+                    type="submit" 
+                    className="uber-btn uber-btn-accent" 
+                    disabled={supportLoading}
+                    style={{ width: 'auto', padding: '0.75rem 2rem', alignSelf: 'flex-start', display: 'flex', gap: '0.5rem', alignItems: 'center' }}
+                  >
+                    {supportLoading ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={16} />}
+                    Submit Query
+                  </button>
+                </form>
+              </div>
+
+              {/* User Queries & Responses */}
+              <div style={{ marginTop: '2rem' }}>
+                <h4 style={{ fontWeight: 800, marginBottom: '1rem' }}>My Recent Queries</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {myAlerts.map(a => (
+                        <div key={a.id} className="glass-card" style={{ borderLeft: `4px solid ${a.resolved ? '#10b981' : '#f59e0b'}` }}>
+                            <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
+                                <span className={`badge ${a.type === 'SOS' ? 'badge-error' : 'badge-info'}`}>{a.type}</span>
+                                <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(a.timestamp).toLocaleDateString()}</span>
+                            </div>
+                            <p style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.75rem' }}>{a.message}</p>
+                            
+                            {a.adminResponse ? (
+                                <div style={{ background: 'rgba(16,185,129,0.05)', padding: '0.875rem', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.1)' }}>
+                                    <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#10b981', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Admin Response</p>
+                                    <p style={{ fontSize: '0.825rem', color: '#e2e8f0' }}>{a.adminResponse}</p>
+                                    <p style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '0.5rem' }}>Responded on: {new Date(a.respondedAt).toLocaleString()}</p>
+                                </div>
+                            ) : (
+                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>Awaiting response from administration...</p>
+                            )}
+                        </div>
+                    ))}
+                    {myAlerts.length === 0 && <p style={{ textAlign: 'center', opacity: 0.4, padding: '2rem' }}>No queries submitted yet.</p>}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* ANALYTICS TAB */}
           {tab === 'analytics' && (
             <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}>
               <div style={{ marginBottom:'1.75rem' }}>
-                <h3 style={{ fontSize:'1.75rem', fontWeight:900, letterSpacing:'-0.03em' }}>Analytics Dashboard</h3>
-                <p className="section-sub">API Base URL: {import.meta.env.VITE_API_BASE_URL || window.location.origin}</p>
+                <h3 style={{ fontSize:'1.75rem', fontWeight:900, letterSpacing:'-0.03em' }}>My Work & Earnings</h3>
+                <p className="section-sub">Track your transport usage and savings</p>
               </div>
 
-              {!analyticsData ? (
-                 <div className="glass-card" style={{ padding: '2rem', textAlign: 'center' }}>
-                    <p>No analytics data available or unauthorized access.</p>
-                 </div>
-              ) : (
-                <>
-                  <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-                    <div className="glass-card">
-                      <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Total Bookings</h4>
-                      <p style={{ fontSize: '2rem', fontWeight: 900, color: '#6366f1' }}>{analyticsData.totalBookings}</p>
-                    </div>
-                    <div className="glass-card">
-                      <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Active Routes</h4>
-                      <p style={{ fontSize: '2rem', fontWeight: 900, color: '#10b981' }}>{analyticsData.activeRoutes}</p>
-                    </div>
-                    <div className="glass-card">
-                      <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Total Employees</h4>
-                      <p style={{ fontSize: '2rem', fontWeight: 900, color: '#f59e0b' }}>{analyticsData.totalEmployees}</p>
-                    </div>
-                  </div>
+              <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
+                <div className="glass-card">
+                  <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Total Commutes</h4>
+                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#6366f1' }}>{myBookings.length}</p>
+                </div>
+                <div className="glass-card">
+                  <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Money Saved (Est.)</h4>
+                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#10b981' }}>${myBookings.reduce((acc, b) => acc + (b.route?.budget || 12), 0)}</p>
+                </div>
+                <div className="glass-card">
+                  <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Carbon Reduced</h4>
+                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#0ea5e9' }}>{(myBookings.length * 2.4).toFixed(1)}kg</p>
+                </div>
+              </div>
 
-                  <div className="glass-card" style={{ padding: '2rem', height: '300px' }}>
-                    <h4 style={{ fontWeight: 800, marginBottom: '1.5rem' }}>Weekly Usage</h4>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={Object.entries(analyticsData.weeklyUsage || {}).map(([name, uv]) => ({ name, uv }))}>
-                        <XAxis dataKey="name" stroke="#94a3b8" />
-                        <YAxis stroke="#94a3b8" />
-                        <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px'}} />
-                        <Bar dataKey="uv" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </>
-              )}
+              <div className="glass-card" style={{ padding: '2rem', height: '300px' }}>
+                <h4 style={{ fontWeight: 800, marginBottom: '1.5rem' }}>Commute Frequency</h4>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[
+                    { name: 'Mon', uv: myBookings.length > 0 ? 2 : 0 },
+                    { name: 'Tue', uv: myBookings.length > 0 ? 3 : 0 },
+                    { name: 'Wed', uv: myBookings.length > 0 ? 1 : 0 },
+                    { name: 'Thu', uv: myBookings.length > 0 ? 4 : 0 },
+                    { name: 'Fri', uv: myBookings.length > 0 ? 2 : 0 }
+                  ]}>
+                    <XAxis dataKey="name" stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px'}} />
+                    <Bar dataKey="uv" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </motion.div>
           )}
+
+          {/* BOOKING MODAL */}
+          <AnimatePresence>
+            {bookingModal && (
+              <div className="modal-overlay" onClick={() => setBookingModal(null)}>
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  className="modal-card" 
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                    <h3 style={{ fontWeight: 900, fontSize: '1.25rem' }}>Confirm Booking</h3>
+                    <button onClick={() => setBookingModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div style={{ background: 'rgba(99,102,241,0.05)', borderRadius: '12px', padding: '1rem', border: '1px solid rgba(99,102,241,0.1)', marginBottom: '1.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#6366f1', textTransform: 'uppercase', marginBottom: '0.25rem' }}>Route Details</p>
+                    <p style={{ fontWeight: 700 }}>{bookingModal.source || 'Main Hub'} → {bookingModal.destination}</p>
+                    <p style={{ fontSize: '0.875rem', color: '#64748b' }}>Scheduled for {bookingModal.pickupTime}</p>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                    <div className="input-group">
+                      <label className="input-label">Number of Seats</label>
+                      <select 
+                        className="uber-input-plain"
+                        value={seatCount}
+                        onChange={e => setSeatCount(parseInt(e.target.value))}
+                      >
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <option key={n} value={n}>{n} Seat{n > 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {seatCount > 1 && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="input-group">
+                        <label className="input-label">Passenger Details</label>
+                        <textarea 
+                          className="uber-input-plain"
+                          placeholder="Enter names or details of other passengers..."
+                          rows={3}
+                          value={passengerDetails}
+                          onChange={e => setPassengerDetails(e.target.value)}
+                        />
+                      </motion.div>
+                    )}
+
+                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Total Cost</p>
+                        <p style={{ fontSize: '1.25rem', fontWeight: 900, color: '#10b981' }}>${(bookingModal.budget * seatCount).toFixed(2)}</p>
+                      </div>
+                      <button 
+                        className="uber-btn uber-btn-accent" 
+                        style={{ width: 'auto', padding: '0.875rem 2rem' }}
+                        onClick={handleBook}
+                        disabled={bookingLoading}
+                      >
+                        {bookingLoading ? <RefreshCw size={18} className="animate-spin" /> : 'Confirm & Pay'}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
         </div>
       </main>
     </div>

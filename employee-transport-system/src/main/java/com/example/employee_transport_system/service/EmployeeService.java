@@ -8,21 +8,40 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service for managing employee records.
+ */
 @Service
-public class EmployeeService {
+public final class EmployeeService {
 
     @Autowired
     private EmployeeRepository employeeRepository;
 
+    /**
+     * Get all employees.
+     */
     public List<Employee> getAllEmployees() {
         return employeeRepository.findAll();
     }
 
-    public Optional<Employee> getEmployeeById(Long id) {
+    /**
+     * Get employee by ID.
+     */
+    public Optional<Employee> getEmployeeById(final Long id) {
         return employeeRepository.findById(id);
     }
 
-    public Employee saveEmployee(Employee employee) {
+    /**
+     * Save or update employee.
+     */
+    public Employee saveEmployee(final Employee employee) {
         return employeeRepository.save(employee);
+    }
+
+    /**
+     * Delete employee by ID.
+     */
+    public void deleteEmployee(final Long id) {
+        employeeRepository.deleteById(id);
     }
 }

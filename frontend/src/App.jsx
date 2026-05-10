@@ -15,8 +15,11 @@ const ProtectedRoute = ({ children, roleRequired }) => {
   
   try {
     const user = parseJwt(token);
-    if (roleRequired && user.role !== roleRequired) {
-      return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />;
+    if (roleRequired) {
+      const allowedRoles = Array.isArray(roleRequired) ? roleRequired : [roleRequired];
+      if (!allowedRoles.includes(user.role)) {
+        return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />;
+      }
     }
     return children;
   } catch (e) {
@@ -32,11 +35,11 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
-        {/* Employee Routes */}
+        {/* Employee & Citizen Routes */}
         <Route 
           path="/dashboard" 
           element={
-            <ProtectedRoute roleRequired="EMPLOYEE">
+            <ProtectedRoute roleRequired={['EMPLOYEE', 'CITIZEN']}>
               <Dashboard />
             </ProtectedRoute>
           } 

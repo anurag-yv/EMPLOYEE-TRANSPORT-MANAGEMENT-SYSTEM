@@ -7,11 +7,15 @@ services:
     rootDir: ./employee-transport-system
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/employee-transport-system-0.0.1-SNAPSHOT.jar
-    branch: main
-    repo: https://github.com/yourusername/employee-transport-system
     envVars:
       - key: SPRING_DATASOURCE_URL
-        value: jdbc:h2:mem:testdb
+        # Set this to your MySQL connection string (e.g., from Aiven or PlanetScale)
+        # For local testing it was: jdbc:mysql://localhost:3306/transport_db
+        value: ${MYSQL_URL}
+      - key: SPRING_DATASOURCE_USERNAME
+        value: ${MYSQL_USER}
+      - key: SPRING_DATASOURCE_PASSWORD
+        value: ${MYSQL_PASSWORD}
       - key: SPRING_PROFILES_ACTIVE
         value: prod
 
@@ -21,10 +25,11 @@ services:
     region: ohio
     plan: free
     rootDir: ./frontend
-    buildCommand: npm install ; npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    branch: main
-    repo: https://github.com/yourusername/employee-transport-system
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://employee-transport-api.onrender.com
+        fromService:
+          type: web
+          name: employee-transport-api
+          property: host

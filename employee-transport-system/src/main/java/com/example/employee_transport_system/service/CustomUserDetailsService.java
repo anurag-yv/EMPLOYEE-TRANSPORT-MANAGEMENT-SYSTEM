@@ -5,19 +5,25 @@ import com.example.employee_transport_system.entity.Employee;
 import com.example.employee_transport_system.repository.AdminRepository;
 import com.example.employee_transport_system.repository.EmployeeRepository;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Custom implementation of Spring Security UserDetailsService.
+ */
 @Service
-public class CustomUserDetailsService implements UserDetailsService {
+public final class CustomUserDetailsService implements UserDetailsService {
 
     private final AdminRepository adminRepo;
     private final EmployeeRepository employeeRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(final String email) throws UsernameNotFoundException {
 
         Employee emp = employeeRepo.findByEmail(email).orElse(null);
         if (emp != null) {
@@ -31,10 +37,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                     List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
         }
 
-        throw new UsernameNotFoundException("User not found: " + email);
+        throw new UsernameNotFoundException("User not found");
     }
 
-    public CustomUserDetailsService(AdminRepository adminRepo, EmployeeRepository employeeRepo) {
+    public CustomUserDetailsService(final AdminRepository adminRepo, final EmployeeRepository employeeRepo) {
         this.adminRepo = adminRepo;
         this.employeeRepo = employeeRepo;
     }

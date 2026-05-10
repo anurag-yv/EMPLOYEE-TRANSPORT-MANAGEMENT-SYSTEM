@@ -42,4 +42,10 @@ public class EmployeeController {
         Employee saved = employeeService.saveEmployee(employee);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
+        employeeService.deleteEmployee(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -628,7 +628,7 @@ tbody tr:hover { background: #f9fafb; }
 
 .toggle-thumb {
   position: absolute;
-  right: 3px; top: 3px; bottom: 3px;
+  left: 3px; top: 3px; bottom: 3px;
   width: 16px;
   background: #10b981;
   border-radius: 100px;

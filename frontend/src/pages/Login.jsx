@@ -95,7 +95,7 @@ const Login = () => {
                     <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
                         <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
                             Don't have an account?{' '}
-                            <Link to="/register" style={{ color: 'white', fontWeight: 700, textDecoration: 'none' }}
+                            <Link to="/register" style={{ color: '#111827', fontWeight: 700, textDecoration: 'none' }}
                                 onMouseEnter={e => e.target.style.textDecoration = 'underline'}
                                 onMouseLeave={e => e.target.style.textDecoration = 'none'}
                             >Register now</Link>

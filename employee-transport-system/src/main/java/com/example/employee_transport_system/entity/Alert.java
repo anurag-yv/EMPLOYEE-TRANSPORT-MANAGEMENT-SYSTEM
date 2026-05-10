@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "alerts")
 public class Alert {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,6 +19,8 @@ public class Alert {
     private String location;
     private LocalDateTime timestamp = LocalDateTime.now();
     private boolean resolved = false;
+    private String adminResponse;
+    private LocalDateTime respondedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -33,4 +36,8 @@ public class Alert {
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
     public boolean isResolved() { return resolved; }
     public void setResolved(boolean resolved) { this.resolved = resolved; }
+    public String getAdminResponse() { return adminResponse; }
+    public void setAdminResponse(String adminResponse) { this.adminResponse = adminResponse; }
+    public LocalDateTime getRespondedAt() { return respondedAt; }
+    public void setRespondedAt(LocalDateTime respondedAt) { this.respondedAt = respondedAt; }
 }

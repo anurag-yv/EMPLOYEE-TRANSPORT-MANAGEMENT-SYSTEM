@@ -12,29 +12,42 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service for handling authentication and user registration.
+ * This class is designed to be proxied by Spring and is not intended
+ * for manual extension.
+ */
 @Service
 public class AuthService {
 
+    /** Repository for employee data. */
     private final EmployeeRepository employeeRepo;
+    /** Repository for admin data. */
     private final AdminRepository adminRepo;
+    /** Encoder for passwords. */
     private final PasswordEncoder passwordEncoder;
+    /** Utility for JWT operations. */
     private final JwtUtil jwtUtil;
 
-    public AuthResponse authenticate(AuthRequest request) {
+    /**
+     * Authenticates a user based on email and password.
+     * @param request the authentication request
+     * @return the authentication response containing JWT
+     */
+    public AuthResponse authenticate(final AuthRequest request) {
         if (request.getEmail() == null || request.getPassword() == null) {
             throw new BadCredentialsException("Email and password are required");
         }
-        
+
         String email = request.getEmail().toLowerCase().trim();
-        System.out.println("Login attempt for: " + email);
 
         // Try Employee first
         Employee employee = employeeRepo.findByEmail(email).orElse(null);
         if (employee != null) {
-            System.out.println("User found in Employee table. Verifying...");
-            if (passwordEncoder.matches(request.getPassword(), employee.getPassword())) {
-                System.out.println("Login success as EMPLOYEE: " + email);
-                String token = jwtUtil.generateToken(employee.getEmail(), "EMPLOYEE");
+            if (passwordEncoder.matches(request.getPassword(),
+                    employee.getPassword())) {
+                String token = jwtUtil.generateToken(employee.getEmail(),
+                        employee.getRole().toUpperCase());
                 return new AuthResponse(token);
             }
         }
@@ -42,32 +55,32 @@ public class AuthService {
         // Try Admin next
         Admin admin = adminRepo.findByEmail(email).orElse(null);
         if (admin != null) {
-            System.out.println("User found in Admin table. Verifying...");
-            if (passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
-                System.out.println("Login success as ADMIN: " + email);
+            if (passwordEncoder.matches(request.getPassword(),
+                    admin.getPassword())) {
                 String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN");
                 return new AuthResponse(token);
             }
         }
 
-        System.out.println("Authentication failed for: " + email);
         throw new BadCredentialsException("Invalid email or password");
     }
 
-    public void register(RegisterRequest request) {
-        if (request.getEmail() == null || request.getPassword() == null || request.getName() == null) {
-            throw new RuntimeException("All fields (Name, Email, Password) are required.");
+    /**
+     * Registers a new user in the system.
+     * @param request the registration details
+     */
+    public void register(final RegisterRequest request) {
+        if (request.getEmail() == null || request.getPassword() == null
+                || request.getName() == null) {
+            throw new RuntimeException("All fields are required.");
         }
 
         String email = request.getEmail().toLowerCase().trim();
-        
-        // GLOBAL UNIQUE CHECK
         boolean existsAsAdmin = adminRepo.findByEmail(email).isPresent();
         boolean existsAsEmployee = employeeRepo.findByEmail(email).isPresent();
 
         if (existsAsAdmin || existsAsEmployee) {
-            System.out.println("Registration blocked: Email " + email + " is already taken.");
-            throw new RuntimeException("Registration failed: This email is already registered. Please use a different email or sign in.");
+            throw new RuntimeException("Email is already registered.");
         }
 
         try {
@@ -75,30 +88,47 @@ public class AuthService {
                 Admin admin = new Admin();
                 admin.setEmail(email);
                 admin.setName(request.getName());
-                admin.setPassword(passwordEncoder.encode(request.getPassword()));
+                admin.setPassword(passwordEncoder.encode(
+                        request.getPassword()));
                 admin.setRole("ADMIN");
                 adminRepo.save(admin);
-                System.out.println("Registered new ADMIN: " + email);
+            } else if ("CITIZEN".equalsIgnoreCase(request.getRole())) {
+                Employee employee = new Employee();
+                employee.setName(request.getName());
+                employee.setEmail(email);
+                employee.setPassword(passwordEncoder.encode(
+                        request.getPassword()));
+                employee.setRole("CITIZEN");
+                employeeRepo.save(employee);
             } else {
                 Employee employee = new Employee();
                 employee.setName(request.getName());
                 employee.setEmail(email);
-                employee.setPassword(passwordEncoder.encode(request.getPassword()));
+                employee.setPassword(passwordEncoder.encode(
+                        request.getPassword()));
                 employee.setRole("EMPLOYEE");
                 employeeRepo.save(employee);
-                System.out.println("Registered new EMPLOYEE: " + email);
             }
         } catch (Exception e) {
-            System.err.println("Database error during registration: " + e.getMessage());
-            throw new RuntimeException("Registration failed due to a database error. Please try again later.");
+            throw new RuntimeException("Registration failed: " + e.getMessage());
         }
     }
 
-    public AuthService(EmployeeRepository employeeRepo, AdminRepository adminRepo, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
-        this.employeeRepo = employeeRepo;
-        this.adminRepo = adminRepo;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
+    /**
+     * Constructor for AuthService.
+     * @param pEmployeeRepo repo for employees
+     * @param pAdminRepo repo for admins
+     * @param pPasswordEncoder encoder for passwords
+     * @param pJwtUtil util for tokens
+     */
+    public AuthService(final EmployeeRepository pEmployeeRepo,
+                       final AdminRepository pAdminRepo,
+                       final PasswordEncoder pPasswordEncoder,
+                       final JwtUtil pJwtUtil) {
+        this.employeeRepo = pEmployeeRepo;
+        this.adminRepo = pAdminRepo;
+        this.passwordEncoder = pPasswordEncoder;
+        this.jwtUtil = pJwtUtil;
     }
 
 }

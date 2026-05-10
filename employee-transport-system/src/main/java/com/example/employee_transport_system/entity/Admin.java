@@ -3,11 +3,15 @@ package com.example.employee_transport_system.entity;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name = "admins")
 public class Admin {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
     private String name;
     private String password;
     private String role = "ADMIN";

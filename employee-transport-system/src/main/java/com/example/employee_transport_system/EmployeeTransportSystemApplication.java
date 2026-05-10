@@ -22,20 +22,7 @@ public class EmployeeTransportSystemApplication implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (adminRepo.findByEmail("admin@test.com").isEmpty()) {
-            Admin admin = new Admin();
-            admin.setEmail("admin@test.com");
-            admin.setPassword(passwordEncoder.encode("1234"));
-            adminRepo.save(admin);
-        }
-
-        if (employeeRepo.findByEmail("employee@test.com").isEmpty()) {
-            Employee emp = new Employee();
-            emp.setEmail("employee@test.com");
-            emp.setName("John Doe");
-            emp.setPassword(passwordEncoder.encode("1234"));
-            employeeRepo.save(emp);
-        }
+        // Seeding is handled in DataSeeder.java
     }
 
     public EmployeeTransportSystemApplication(AdminRepository adminRepo, EmployeeRepository employeeRepo, PasswordEncoder passwordEncoder) {

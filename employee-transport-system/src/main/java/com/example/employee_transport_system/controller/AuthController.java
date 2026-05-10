@@ -25,6 +25,11 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully");
     }
 
+    @GetMapping("/health")
+    public ResponseEntity<String> health() {
+        return ResponseEntity.ok("Backend is UP");
+    }
+
     public AuthController(AuthService authService) {
         this.authService = authService;
     }

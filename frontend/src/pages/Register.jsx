@@ -90,8 +90,8 @@ const Register = () => {
 
                                 <div className="input-group">
                                     <label className="input-label">Account Role</label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                                        {['EMPLOYEE', 'ADMIN'].map(role => (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                                        {['EMPLOYEE', 'ADMIN', 'CITIZEN'].map(role => (
                                             <button
                                                 key={role}
                                                 type="button"
@@ -99,9 +99,9 @@ const Register = () => {
                                                 style={{
                                                     padding: '0.625rem', borderRadius: '12px', fontWeight: 700, fontSize: '0.875rem',
                                                     cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit',
-                                                    background: formData.role === role ? 'white' : 'rgba(255,255,255,0.04)',
-                                                    color: formData.role === role ? 'black' : '#94a3b8',
-                                                    border: formData.role === role ? '1px solid white' : '1px solid rgba(255,255,255,0.08)',
+                                                    background: formData.role === role ? '#111827' : 'rgba(0,0,0,0.04)',
+                                                    color: formData.role === role ? 'white' : '#64748b',
+                                                    border: formData.role === role ? '1px solid #111827' : '1px solid rgba(0,0,0,0.08)',
                                                 }}
                                             >
                                                 {role.charAt(0) + role.slice(1).toLowerCase()}
@@ -123,7 +123,7 @@ const Register = () => {
                             <div style={{ marginTop: '1.75rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
                                 <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
                                     Already have an account?{' '}
-                                    <Link to="/login" style={{ color: 'white', fontWeight: 700, textDecoration: 'none' }}
+                                    <Link to="/login" style={{ color: '#111827', fontWeight: 700, textDecoration: 'none' }}
                                         onMouseEnter={e => e.target.style.textDecoration = 'underline'}
                                         onMouseLeave={e => e.target.style.textDecoration = 'none'}
                                     >Sign in</Link>

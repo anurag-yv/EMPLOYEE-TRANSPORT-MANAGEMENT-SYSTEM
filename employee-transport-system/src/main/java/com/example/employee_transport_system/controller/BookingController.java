@@ -37,13 +37,33 @@ public class BookingController {
     @PostMapping
     public Booking createBooking(@Valid @RequestBody BookingRequest request) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return bookingService.bookSeatByEmail(email, request.getRouteId());
+        return bookingService.bookSeatByEmail(
+            email, 
+            request.getRouteId(), 
+            request.getNumberOfSeats(), 
+            request.getPassengerDetails()
+        );
     }
+
 
     @GetMapping("/my")
     public List<Booking> getMyBookings() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return bookingService.getBookingsByEmail(email);
+    }
+
+    @PostMapping("/assign")
+    public Booking assignBooking(@RequestBody java.util.Map<String, Object> payload) {
+        String email = (String) payload.get("email");
+        Long routeId = Long.valueOf(payload.get("routeId").toString());
+        return bookingService.bookSeatByEmail(email, routeId);
+    }
+
+    @GetMapping("/route/{routeId}")
+    public List<Booking> getBookingsByRoute(@PathVariable Long routeId) {
+        return bookingRepo.findAll().stream()
+                .filter(b -> b.getRoute() != null && b.getRoute().getId().equals(routeId))
+                .toList();
     }
 
     @DeleteMapping("/{id}")
