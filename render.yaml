@@ -19,7 +19,7 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
 
-  - type: static
+  - type: web
     name: employee-transport-ui
     env: static
     region: ohio
