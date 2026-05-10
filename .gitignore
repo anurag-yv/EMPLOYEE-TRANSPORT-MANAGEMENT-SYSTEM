@@ -1,0 +1,26 @@
+# Java / Maven
+**/target/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+**/*.jar
+**/*.war
+**/*.ear
+
+# Node / React
+**/node_modules/
+**/dist/
+**/.env
+**/.env.local
+**/*.log
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# DB
+**/*.db
+**/*.sqlite
