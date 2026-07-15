@@ -25,6 +25,12 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully");
     }
 
+    @PostMapping("/admin/create-admin")
+    public ResponseEntity<String> createAdmin(@RequestBody RegisterRequest request) {
+        authService.createAdmin(request);
+        return ResponseEntity.ok("Admin created successfully");
+    }
+
     @GetMapping("/health")
     public ResponseEntity<String> health() {
         return ResponseEntity.ok("Backend is UP");

@@ -4,6 +4,8 @@ import com.example.employee_transport_system.entity.Booking;
 import com.example.employee_transport_system.entity.Employee;
 import com.example.employee_transport_system.entity.Route;
 import com.example.employee_transport_system.entity.SystemConfig;
+import com.example.employee_transport_system.exception.BookingLimitExceededException;
+import com.example.employee_transport_system.exception.ResourceNotFoundException;
 import com.example.employee_transport_system.repository.BookingRepository;
 import com.example.employee_transport_system.repository.EmployeeRepository;
 import com.example.employee_transport_system.repository.RouteRepository;
@@ -80,7 +82,7 @@ class BookingServiceTest {
         String email = "missing@example.com";
         when(employeeRepo.findByEmail(email)).thenReturn(Optional.empty());
 
-        Exception exception = assertThrows(RuntimeException.class, () -> 
+        Exception exception = assertThrows(ResourceNotFoundException.class, () -> 
             bookingService.bookSeatByEmail(email, 1L)
         );
 
@@ -103,7 +105,7 @@ class BookingServiceTest {
         existingBookings.add(new Booking());
         when(bookingRepo.findByEmployee(employee)).thenReturn(existingBookings);
 
-        Exception exception = assertThrows(RuntimeException.class, () -> 
+        Exception exception = assertThrows(BookingLimitExceededException.class, () -> 
             bookingService.bookSeatByEmail(email, 1L)
         );
 

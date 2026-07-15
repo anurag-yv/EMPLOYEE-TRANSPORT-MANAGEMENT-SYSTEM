@@ -81,6 +81,28 @@ class AuthServiceTest {
     }
 
     @Test
+    void testRegisterWithAdminRoleCreatesEmployee() {
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Admin Wannabe");
+        request.setEmail("adminwannabe@example.com");
+        request.setPassword("password123");
+        request.setRole("ADMIN");
+
+        when(employeeRepo.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(adminRepo.findByEmail(anyString())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+
+        assertDoesNotThrow(() -> authService.register(request));
+
+        // Verify an Employee (not Admin) entity was saved
+        verify(employeeRepo, times(1)).save(argThat(emp -> 
+            "EMPLOYEE".equals(emp.getRole())
+        ));
+        // Verify no Admin was ever created
+        verify(adminRepo, never()).save(any());
+    }
+
+    @Test
     void testAuthenticateFailure() {
         AuthRequest request = new AuthRequest();
         request.setEmail("wrong@example.com");

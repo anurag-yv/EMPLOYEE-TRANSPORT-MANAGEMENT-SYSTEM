@@ -29,7 +29,29 @@ public final class GlobalExceptionHandler {
     }
 
     /**
-     * Handles runtime exceptions.
+     * Handles resource not found (404).
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResourceNotFound(
+            final ResourceNotFoundException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * Handles seat unavailable / duplicate booking / booking limit (409 Conflict).
+     */
+    @ExceptionHandler({SeatUnavailableException.class, DuplicateBookingException.class, BookingLimitExceededException.class})
+    public ResponseEntity<Map<String, String>> handleConflict(
+            final RuntimeException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
+     * Handles runtime exceptions (400 Bad Request fallback).
      * @param ex the exception
      * @return response entity with error message
      */

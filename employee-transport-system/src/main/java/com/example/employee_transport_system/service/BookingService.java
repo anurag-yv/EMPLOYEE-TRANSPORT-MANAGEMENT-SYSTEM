@@ -4,10 +4,15 @@ import com.example.employee_transport_system.entity.Booking;
 import com.example.employee_transport_system.entity.Employee;
 import com.example.employee_transport_system.entity.Route;
 import com.example.employee_transport_system.entity.SystemConfig;
+import com.example.employee_transport_system.exception.BookingLimitExceededException;
+import com.example.employee_transport_system.exception.DuplicateBookingException;
+import com.example.employee_transport_system.exception.ResourceNotFoundException;
+import com.example.employee_transport_system.exception.SeatUnavailableException;
 import com.example.employee_transport_system.repository.BookingRepository;
 import com.example.employee_transport_system.repository.EmployeeRepository;
 import com.example.employee_transport_system.repository.RouteRepository;
 import com.example.employee_transport_system.repository.SystemConfigRepository;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,16 +50,16 @@ public class BookingService {
                                    final int seats, final String details) {
         SystemConfig config = getConfig();
         Employee employee = employeeRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // 1. Max Bookings Check
         List<Booking> activeBookings = bookingRepo.findByEmployee(employee);
         if (activeBookings.size() >= config.getMaxBookings()) {
-            throw new RuntimeException("Maximum booking limit reached (" + config.getMaxBookings() + ")");
+            throw new BookingLimitExceededException("Maximum booking limit reached (" + config.getMaxBookings() + ")");
         }
 
         Route route = routeRepo.findById(routeId)
-                .orElseThrow(() -> new RuntimeException("Route not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Route not found"));
 
         // 2. Booking Window Check
         try {
@@ -72,11 +77,11 @@ public class BookingService {
         }
 
         if (bookingRepo.existsByEmployeeAndRoute(employee, route)) {
-            throw new RuntimeException("You have already booked this route");
+            throw new DuplicateBookingException("You have already booked this route");
         }
 
         if (route.getBookedSeats() + seats > route.getCapacity()) {
-            throw new RuntimeException("Not enough seats. Available: " + (route.getCapacity() - route.getBookedSeats()));
+            throw new SeatUnavailableException("Not enough seats. Available: " + (route.getCapacity() - route.getBookedSeats()));
         }
 
         Booking booking = new Booking();
@@ -87,7 +92,11 @@ public class BookingService {
         booking.setStatus("CONFIRMED");
 
         route.setBookedSeats(route.getBookedSeats() + seats);
-        routeRepo.save(route);
+        try {
+            routeRepo.save(route);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new SeatUnavailableException("Seat no longer available, please try again");
+        }
 
         return bookingRepo.save(booking);
     }

@@ -83,16 +83,15 @@ public class AuthService {
             throw new RuntimeException("Email is already registered.");
         }
 
+        // Public registration never creates ADMIN accounts.
+        // Any "ADMIN" role sent by the client is ignored — force EMPLOYEE.
         try {
-            if ("ADMIN".equalsIgnoreCase(request.getRole())) {
-                Admin admin = new Admin();
-                admin.setEmail(email);
-                admin.setName(request.getName());
-                admin.setPassword(passwordEncoder.encode(
-                        request.getPassword()));
-                admin.setRole("ADMIN");
-                adminRepo.save(admin);
-            } else if ("CITIZEN".equalsIgnoreCase(request.getRole())) {
+            String effectiveRole = request.getRole();
+            if (effectiveRole != null && "ADMIN".equalsIgnoreCase(effectiveRole)) {
+                effectiveRole = "EMPLOYEE";
+            }
+
+            if ("CITIZEN".equalsIgnoreCase(effectiveRole)) {
                 Employee employee = new Employee();
                 employee.setName(request.getName());
                 employee.setEmail(email);
@@ -111,6 +110,36 @@ public class AuthService {
             }
         } catch (Exception e) {
             throw new RuntimeException("Registration failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a new admin account. Only callable by existing authenticated ADMIN users.
+     * @param request the registration details for the new admin
+     */
+    public void createAdmin(final RegisterRequest request) {
+        if (request.getEmail() == null || request.getPassword() == null
+                || request.getName() == null) {
+            throw new RuntimeException("All fields are required.");
+        }
+
+        String email = request.getEmail().toLowerCase().trim();
+        boolean existsAsAdmin = adminRepo.findByEmail(email).isPresent();
+        boolean existsAsEmployee = employeeRepo.findByEmail(email).isPresent();
+
+        if (existsAsAdmin || existsAsEmployee) {
+            throw new RuntimeException("Email is already registered.");
+        }
+
+        try {
+            Admin admin = new Admin();
+            admin.setEmail(email);
+            admin.setName(request.getName());
+            admin.setPassword(passwordEncoder.encode(request.getPassword()));
+            admin.setRole("ADMIN");
+            adminRepo.save(admin);
+        } catch (Exception e) {
+            throw new RuntimeException("Admin creation failed: " + e.getMessage());
         }
     }
 

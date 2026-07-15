@@ -4,7 +4,7 @@ public class RegisterRequest {
     private String name;
     private String email;
     private String password;
-    private String role; // "EMPLOYEE" or "ADMIN"
+    private String role; // "EMPLOYEE" or "CITIZEN" — ADMIN is ignored/overridden
 
     // Getters and Setters
     public String getName() { return name; }

@@ -54,12 +54,14 @@ const AdminDashboard = () => {
         try {
             const [r, e, a, c] = await Promise.all([
                 api.get('/api/routes'), 
-                api.get('/api/employees'),
+                api.get('/api/employees?page=0&size=100'),
                 api.get('/api/alerts/active'),
                 api.get('/api/config')
             ]);
             setRoutes(Array.isArray(r.data) ? r.data : []);
-            setEmployees(Array.isArray(e.data) ? e.data : []);
+            // Paginated response: { content: [...], ... } or plain array fallback
+            const empData = e.data?.content || (Array.isArray(e.data) ? e.data : []);
+            setEmployees(empData);
             setAlerts(Array.isArray(a.data) ? a.data : []);
             if (c.data) setConfig(c.data);
         } catch (err) {

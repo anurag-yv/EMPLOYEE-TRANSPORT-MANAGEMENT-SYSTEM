@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
@@ -37,6 +38,10 @@ public final class Route {
 
     /** The number of seats already booked. */
     private int bookedSeats = 0;
+
+    /** Optimistic locking version field. */
+    @Version
+    private Long version;
 
     /** The budget or cost allocated to this trip. */
     private double budget;
