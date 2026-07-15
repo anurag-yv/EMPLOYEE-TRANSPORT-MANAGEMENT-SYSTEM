@@ -43,82 +43,42 @@ public final class Employee {
     /** The system role assigned to this user (e.g., EMPLOYEE, CITIZEN). */
     private String role = "Employee";
 
-    /**
-     * Gets the employee ID.
-     * @return the ID
-     */
     public Long getId() {
         return id;
     }
 
-    /**
-     * Sets the employee ID.
-     * @param pId the unique ID
-     */
     public void setId(final Long pId) {
         this.id = pId;
     }
 
-    /**
-     * Gets the employee's name.
-     * @return the name
-     */
     public String getName() {
         return name;
     }
 
-    /**
-     * Sets the employee's name.
-     * @param pName the name to set
-     */
     public void setName(final String pName) {
         this.name = pName;
     }
 
-    /**
-     * Gets the employee's email.
-     * @return the email
-     */
     public String getEmail() {
         return email;
     }
 
-    /**
-     * Sets the employee's email.
-     * @param pEmail the email to set
-     */
     public void setEmail(final String pEmail) {
         this.email = pEmail;
     }
 
-    /**
-     * Gets the encrypted password.
-     * @return the password
-     */
     public String getPassword() {
         return password;
     }
 
-    /**
-     * Sets the employee's password.
-     * @param pPassword the password to set
-     */
     public void setPassword(final String pPassword) {
         this.password = pPassword;
     }
 
-    /**
-     * Gets the employee's role.
-     * @return the role
-     */
     public String getRole() {
         return role;
     }
 
-    /**
-     * Sets the employee's role.
-     * @param pRole the role to set
-     */
     public void setRole(final String pRole) {
         this.role = pRole;
     }

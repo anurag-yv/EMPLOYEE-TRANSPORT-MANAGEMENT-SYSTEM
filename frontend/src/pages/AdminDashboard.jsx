@@ -18,6 +18,7 @@ const AdminDashboard = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showAddModal, setShowAddModal] = useState(false);
     const [alerts, setAlerts] = useState([]);
+    const [allBookings, setAllBookings] = useState([]);
     const [deleteLoading, setDeleteLoading] = useState(null);
     const [resolveLoading, setResolveLoading] = useState(null);
     const [showAssignModal, setShowAssignModal] = useState(false);
@@ -52,17 +53,19 @@ const AdminDashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [r, e, a, c] = await Promise.all([
+            const [r, e, a, c, b] = await Promise.all([
                 api.get('/api/routes'), 
                 api.get('/api/employees?page=0&size=100'),
                 api.get('/api/alerts/active'),
-                api.get('/api/config')
+                api.get('/api/config'),
+                api.get('/api/booking')
             ]);
             setRoutes(Array.isArray(r.data) ? r.data : []);
-            // Paginated response: { content: [...], ... } or plain array fallback
+
             const empData = e.data?.content || (Array.isArray(e.data) ? e.data : []);
             setEmployees(empData);
             setAlerts(Array.isArray(a.data) ? a.data : []);
+            setAllBookings(Array.isArray(b.data) ? b.data : []);
             if (c.data) setConfig(c.data);
         } catch (err) {
             console.error(err);
@@ -96,6 +99,16 @@ const AdminDashboard = () => {
             showToast('Ride assigned successfully!');
         } catch (err) {
             showToast(err.response?.data?.message || 'Assignment failed.', 'error');
+        }
+    };
+
+    const handleUnassignRide = async (bookingId) => {
+        try {
+            await api.delete(`/api/booking/admin/${bookingId}`);
+            await fetchData();
+            showToast('Rider unassigned successfully!');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Unassign failed.', 'error');
         }
     };
 
@@ -339,16 +352,17 @@ const AdminDashboard = () => {
                                                 </div>
                                                 <p style={{ fontWeight: 800, fontSize: '0.875rem', marginBottom: '0.25rem' }}>{alert.employee?.name || 'Unknown User'}</p>
                                                 <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.75rem' }}>{alert.message}</p>
-                                                <div className="flex-between">
-                                                    <span style={{ fontSize: '0.7rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                        <MapPin size={10} /> {alert.location}
+                                                <div className="flex-between" style={{ gap: '1rem', marginTop: '0.5rem' }}>
+                                                    <span style={{ fontSize: '0.7rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                                                        <MapPin size={12} style={{ flexShrink: 0 }} /> 
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{alert.location || 'Unknown Location'}</span>
                                                     </span>
                                                     <button 
-                                                        onClick={() => { setSelectedAlert(alert); setShowRespondModal(true); }}
+                                                        onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); setShowRespondModal(true); }}
                                                         disabled={resolveLoading === alert.id}
-                                                        style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', padding: '0.25rem 0.6rem', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer' }}
+                                                        style={{ flexShrink: 0, background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', position: 'relative', zIndex: 10 }}
                                                     >
-                                                        Respond
+                                                        {resolveLoading === alert.id ? '...' : 'Respond'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -396,13 +410,13 @@ const AdminDashboard = () => {
                                                             <p style={{ fontWeight: 700 }}>{r.destination}</p>
                                                             <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '0.15rem' }}>From: {r.source || 'Main Hub'}</p>
                                                         </td>
-                                                        <td style={{ color: '#94a3b8', fontWeight: 600 }}>{r.pickupTime}</td>
-                                                        <td>
+                                                        <td style={{ padding: '1rem', color: '#94a3b8', fontWeight: 600 }}>{r.pickupTime}</td>
+                                                        <td style={{ padding: '1rem' }}>
                                                             <span style={{ fontWeight: 700, color: '#10b981' }}>
                                                                 ${r.budget || 0}
                                                             </span>
                                                         </td>
-                                                        <td>
+                                                        <td style={{ padding: '1rem' }}>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '120px' }}>
                                                                 <div className="progress-bar" style={{ flex: 1 }}>
                                                                      <div
@@ -413,7 +427,7 @@ const AdminDashboard = () => {
                                                                  <span className="font-mono" style={{ fontSize: '0.7rem', color: '#94a3b8', flexShrink: 0 }}>{r.bookedSeats}/{r.capacity}</span>
                                                              </div>
                                                          </td>
-                                                         <td>
+                                                         <td style={{ padding: '1rem' }}>
                                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                                                  <button
                                                                      onClick={() => fetchRouteDetails(r.id)}
@@ -423,14 +437,37 @@ const AdminDashboard = () => {
                                                                  >
                                                                      <Users size={14} />
                                                                  </button>
-                                                                 <button
-                                                                     onClick={() => { setAssignData({ ...assignData, routeId: r.id }); setShowAssignModal(true); }}
-                                                                     className="uber-btn-icon"
-                                                                     title="Assign Ride"
-                                                                     style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}
-                                                                 >
-                                                                     <Plus size={14} />
-                                                                 </button>
+                                                                 
+                                                                 {(() => {
+                                                                     const assignedBooking = allBookings.find(b => b.route?.id === r.id && b.status === 'CONFIRMED' && b.employee?.role !== 'CITIZEN');
+                                                                     if (assignedBooking) {
+                                                                         return (
+                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '0.2rem 0.4rem', borderRadius: '8px' }}>
+                                                                                 <span className="badge" style={{ color: '#6366f1', padding: '0', fontSize: '0.7rem', background: 'transparent' }}>
+                                                                                     {assignedBooking.employee?.name || 'Assigned'}
+                                                                                 </span>
+                                                                                 <button
+                                                                                     onClick={() => handleUnassignRide(assignedBooking.id)}
+                                                                                     title="Unassign"
+                                                                                     style={{ background: 'transparent', border: 'none', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+                                                                                 >
+                                                                                     <X size={12} />
+                                                                                 </button>
+                                                                             </div>
+                                                                         );
+                                                                     }
+                                                                     return (
+                                                                         <button
+                                                                             onClick={() => { setAssignData({ ...assignData, routeId: r.id }); setShowAssignModal(true); }}
+                                                                             className="uber-btn-icon"
+                                                                             title="Assign Ride"
+                                                                             style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}
+                                                                         >
+                                                                             <Plus size={14} />
+                                                                         </button>
+                                                                     );
+                                                                 })()}
+
                                                                  <button
                                                                      onClick={() => handleDeleteRoute(r.id)}
                                                                      disabled={deleteLoading === r.id}
@@ -464,34 +501,62 @@ const AdminDashboard = () => {
                     {activeTab === 'personnel' && (
                         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="grid-3">
-                                {employees.filter(e => e.role !== 'CITIZEN').map((e, i) => (
-                                    <motion.div
-                                        key={e.id || i}
-                                        initial={{ opacity: 0, scale: 0.95 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: i * 0.05 }}
-                                        className="glass-card"
-                                        style={{ display: 'flex', alignItems: 'center', gap: '1.125rem' }}
-                                    >
-                                        <div className="avatar" style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#6366f1', fontSize: '1.25rem' }}>
-                                            {e.name?.[0]?.toUpperCase() || '?'}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <h4 style={{ fontWeight: 800, marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</h4>
-                                            <p className="font-mono" style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.5rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.email}</p>
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                <span className="badge badge-info">{e.role}</span>
-                                                <span style={{ fontSize: '0.65rem', color: '#64748b' }}>Active</span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => handleDeleteEmployee(e.id)}
-                                            style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: '8px', padding: '0.4rem', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                {employees.filter(e => e.role !== 'CITIZEN').map((e, i) => {
+                                    const empBookings = allBookings.filter(b => b.employee?.id === e.id);
+                                    const totalBookings = empBookings.length;
+                                    const cancelledBookings = empBookings.filter(b => b.status === 'CANCELLED').length;
+                                    const activeBooking = empBookings.find(b => b.status === 'CONFIRMED');
+
+                                    return (
+                                        <motion.div
+                                            key={e.id || i}
+                                            initial={{ opacity: 0, scale: 0.95 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: i * 0.05 }}
+                                            className="glass-card"
+                                            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
                                         >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </motion.div>
-                                ))}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '1.125rem' }}>
+                                                <div className="avatar" style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#6366f1', fontSize: '1.25rem' }}>
+                                                    {e.name?.[0]?.toUpperCase() || '?'}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <h4 style={{ fontWeight: 800, marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</h4>
+                                                    <p className="font-mono" style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.5rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.email}</p>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                        <span className="badge badge-info">{e.role}</span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteEmployee(e.id)}
+                                                    style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: '8px', padding: '0.4rem', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                            
+                                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                                                {activeBooking ? (
+                                                    <span className="badge" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981', fontSize: '0.65rem' }}>
+                                                        <Bus size={10} style={{ marginRight: '0.2rem' }} /> Assigned: #{activeBooking.route?.id + 100}
+                                                    </span>
+                                                ) : (
+                                                    <span className="badge" style={{ background: 'rgba(148,163,184,0.1)', color: '#94a3b8', fontSize: '0.65rem' }}>
+                                                        <Bus size={10} style={{ marginRight: '0.2rem' }} /> Unassigned
+                                                    </span>
+                                                )}
+                                                <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: '#cbd5e1', fontSize: '0.65rem' }}>
+                                                    Total Rides: {totalBookings}
+                                                </span>
+                                                {cancelledBookings > 0 && (
+                                                    <span className="badge" style={{ background: 'rgba(244,63,94,0.1)', color: '#f43f5e', fontSize: '0.65rem' }}>
+                                                        Cancelled: {cancelledBookings}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                                 {employees.length === 0 && (
                                     <div className="glass-card" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4rem', opacity: 0.3 }}>
                                         <Users size={40} style={{ margin: '0 auto 1rem' }} />
@@ -645,7 +710,11 @@ const AdminDashboard = () => {
                                         required
                                     >
                                         <option value="">-- Choose Personnel --</option>
-                                        {employees.filter(e => e.role !== 'CITIZEN').map(emp => (
+                                        {employees.filter(e => {
+                                            if (e.role === 'CITIZEN') return false;
+                                            const hasActiveBooking = allBookings.some(b => b.employee?.id === e.id && b.status === 'CONFIRMED');
+                                            return !hasActiveBooking;
+                                        }).map(emp => (
                                             <option key={emp.id} value={emp.email}>{emp.name} ({emp.email})</option>
                                         ))}
                                     </select>
@@ -673,7 +742,9 @@ const AdminDashboard = () => {
                                             <p style={{ fontWeight: 700 }}>{b.employee?.name}</p>
                                             <p style={{ fontSize: '0.75rem', color: '#64748b' }}>{b.employee?.email}</p>
                                         </div>
-                                        <span className="badge badge-success">Confirmed</span>
+                                        <span className={`badge ${b.status === 'CONFIRMED' || !b.status ? 'badge-success' : 'badge-error'}`}>
+                                            {b.status || 'Confirmed'}
+                                        </span>
                                     </div>
                                 ))}
                                 {routeBookings.length === 0 && <p style={{ textAlign: 'center', opacity: 0.5, padding: '2rem' }}>No bookings yet.</p>}

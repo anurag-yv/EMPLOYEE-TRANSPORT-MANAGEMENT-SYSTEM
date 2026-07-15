@@ -1,36 +1,32 @@
-# Employee Transport Management System
+# Employee Transport System
 
-A premium, full-stack enterprise solution for managing employee and citizen transport logistics. Built with Spring Boot and React, featuring real-time tracking, multi-seat booking, and an advanced administrative dashboard.
+A full-stack application for managing company transport logistics, featuring route tracking, multi-seat bookings, and an administrative dashboard.
 
 ## Features
 
-- **Multi-Role Access**: Dedicated dashboards for Admins, Employees, and Citizens.
-- **Persistent Storage**: Robust data management using MySQL.
-- **Smart Booking**: Support for multi-seat reservations with detailed passenger tracking.
-- **Admin Command Center**: Centralized management for routes, personnel, and system configurations.
-- **Safety First**: Integrated SOS alerts and live location sharing capabilities.
-- **Analytics**: Visualization of commute trends, cost savings, and environmental impact.
+- **Role-Based Access**: Dedicated interfaces for Admins, Riders, and standard Employees/Citizens.
+- **Booking Management**: Multi-seat reservations, route capacity tracking, and status monitoring.
+- **Admin Dashboard**: Centralized management for routes, bookings, and personnel assignments.
+- **Safety Features**: Integrated SOS alerts and location sharing workflows.
+- **Reporting**: Visualization of route utilization and commute trends.
 
-## Technology Stack
+## Tech Stack
 
 ### Backend
-- Spring Boot 3.2.3
-- Java 21
-- Spring Security with JWT Authentication
+- Spring Boot 3.2.3 (Java 21)
+- Spring Security (JWT Authentication)
 - Spring Data JPA
-- MySQL / H2
+- MySQL
 
 ### Frontend
 - React (Vite)
-- Framer Motion for premium animations
-- Lucide React icons
-- Recharts for analytics
-- Axios for API communication
+- Recharts
+- Axios
 
 ## Getting Started
 
 ### Prerequisites
-- JDK 21 or higher
+- JDK 21+
 - Node.js 18+
 - MySQL Server
 
@@ -56,10 +52,11 @@ A premium, full-stack enterprise solution for managing employee and citizen tran
 
 ## Deployment
 
-The project is configured for deployment on Render using the included `render.yaml` blueprint. Ensure you set the following environment variables on the backend service:
-- `MYSQL_URL`: Your production JDBC URL.
-- `MYSQL_USER`: Database username.
-- `MYSQL_PASSWORD`: Database password.
+Configured for Render deployment using the included `render.yaml`.
+Required backend environment variables:
+- `MYSQL_URL`
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
 
 ## License
 Proprietary. All rights reserved.

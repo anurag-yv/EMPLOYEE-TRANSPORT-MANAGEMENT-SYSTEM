@@ -12,6 +12,7 @@ import com.example.employee_transport_system.repository.BookingRepository;
 import com.example.employee_transport_system.repository.EmployeeRepository;
 import com.example.employee_transport_system.repository.RouteRepository;
 import com.example.employee_transport_system.repository.SystemConfigRepository;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,15 +31,18 @@ public class BookingService {
     private final EmployeeRepository employeeRepo;
     private final RouteRepository routeRepo;
     private final SystemConfigRepository configRepo;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     public BookingService(BookingRepository bookingRepo, 
                           EmployeeRepository employeeRepo, 
                           RouteRepository routeRepo,
-                          SystemConfigRepository configRepo) {
+                          SystemConfigRepository configRepo,
+                          KafkaTemplate<String, String> kafkaTemplate) {
         this.bookingRepo = bookingRepo;
         this.employeeRepo = employeeRepo;
         this.routeRepo = routeRepo;
         this.configRepo = configRepo;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     private SystemConfig getConfig() {
@@ -52,32 +56,36 @@ public class BookingService {
         Employee employee = employeeRepo.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // 1. Max Bookings Check
-        List<Booking> activeBookings = bookingRepo.findByEmployee(employee);
-        if (activeBookings.size() >= config.getMaxBookings()) {
-            throw new BookingLimitExceededException("Maximum booking limit reached (" + config.getMaxBookings() + ")");
-        }
+
 
         Route route = routeRepo.findById(routeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Route not found"));
 
-        // 2. Booking Window Check
         try {
-            // Simple check: assume route.pickupTime is in "HH:mm AM/PM"
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("hh:mm a");
             LocalTime pickup = LocalTime.parse(route.getPickupTime().toUpperCase(), dtf);
             LocalTime now = LocalTime.now();
             
-            // If now is within X hours of pickup, block (Simplified logic)
             if (now.plusHours(config.getBookingWindow()).isAfter(pickup) && now.isBefore(pickup)) {
                 throw new RuntimeException("Booking closed. Window: " + config.getBookingWindow() + "h before departure.");
             }
         } catch (Exception e) {
-            // If time format is weird, skip check or handle
+            // Ignore parse errors
         }
 
-        if (bookingRepo.existsByEmployeeAndRoute(employee, route)) {
+
+
+        if (bookingRepo.existsByEmployeeAndRouteAndStatus(employee, route, "CONFIRMED")) {
             throw new DuplicateBookingException("You have already booked this route");
+        }
+
+        // If an EMPLOYEE (Rider) is trying to book, ensure only one rider is assigned
+        if (!"CITIZEN".equalsIgnoreCase(employee.getRole())) {
+            boolean hasRider = bookingRepo.findByRoute(route).stream()
+                .anyMatch(b -> "CONFIRMED".equals(b.getStatus()) && !"CITIZEN".equalsIgnoreCase(b.getEmployee().getRole()));
+            if (hasRider) {
+                throw new BookingLimitExceededException("This bus already has a rider assigned.");
+            }
         }
 
         if (route.getBookedSeats() + seats > route.getCapacity()) {
@@ -98,7 +106,19 @@ public class BookingService {
             throw new SeatUnavailableException("Seat no longer available, please try again");
         }
 
-        return bookingRepo.save(booking);
+        Booking saved = bookingRepo.save(booking);
+        
+        // Publish booking event
+        try {
+            String event = String.format(
+                    "{\"type\":\"BOOKING_CREATED\",\"bookingId\":%d,\"employeeEmail\":\"%s\",\"routeId\":%d,\"seats\":%d}",
+                    saved.getId(), email, routeId, seats);
+            kafkaTemplate.send("booking-events", event);
+        } catch (Exception e) {
+            // Ignore Kafka errors
+        }
+        
+        return saved;
     }
 
     @Transactional
@@ -112,26 +132,63 @@ public class BookingService {
         return bookingRepo.findByEmployee(employee);
     }
 
+    /**
+     * Get the Kafka template for publishing events.
+     */
+    public KafkaTemplate<String, String> getKafkaTemplate() {
+        return kafkaTemplate;
+    }
+
     @Transactional
     public void cancelBookingByEmail(final String email, final Long bookingId) {
-        Booking booking = bookingRepo.findById(bookingId).orElseThrow(() -> new RuntimeException("Booking not found"));
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         if (!booking.getEmployee().getEmail().equals(email)) throw new RuntimeException("Unauthorized");
+        if ("CANCELLED".equals(booking.getStatus())) {
+            throw new IllegalStateException("Booking is already cancelled");
+        }
+        booking.setStatus("CANCELLED");
         Route route = booking.getRoute();
         if (route != null) {
             route.setBookedSeats(Math.max(0, route.getBookedSeats() - booking.getNumberOfSeats()));
             routeRepo.save(route);
         }
-        bookingRepo.deleteById(bookingId);
+        bookingRepo.save(booking);
+
+        // Publish cancellation event
+        try {
+            String event = String.format(
+                    "{\"type\":\"BOOKING_CANCELLED\",\"bookingId\":%d,\"employeeEmail\":\"%s\",\"routeId\":%s,\"seats\":%d}",
+                    bookingId, email, route != null ? String.valueOf(route.getId()) : "null", booking.getNumberOfSeats());
+            kafkaTemplate.send("booking-events", event);
+        } catch (Exception e) {
+            // Ignore Kafka errors
+        }
     }
 
     @Transactional
     public void cancelBooking(final Long bookingId) {
-        Booking booking = bookingRepo.findById(bookingId).orElseThrow(() -> new RuntimeException("Booking not found"));
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+        if ("CANCELLED".equals(booking.getStatus())) {
+            return;
+        }
+        booking.setStatus("CANCELLED");
         Route route = booking.getRoute();
         if (route != null) {
             route.setBookedSeats(Math.max(0, route.getBookedSeats() - booking.getNumberOfSeats()));
             routeRepo.save(route);
         }
-        bookingRepo.deleteById(bookingId);
+        bookingRepo.save(booking);
+        
+        // Publish cancellation event
+        try {
+            String event = String.format(
+                    "{\"type\":\"BOOKING_CANCELLED\",\"bookingId\":%d,\"employeeEmail\":\"%s\",\"routeId\":%s,\"seats\":%d}",
+                    bookingId, booking.getEmployee().getEmail(), route != null ? String.valueOf(route.getId()) : "null", booking.getNumberOfSeats());
+            kafkaTemplate.send("booking-events", event);
+        } catch (Exception e) {
+            // Ignore Kafka errors
+        }
     }
 }

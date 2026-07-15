@@ -19,6 +19,9 @@ public class EmployeeController {
     private EmployeeService employeeService;
 
     @Autowired
+    private com.example.employee_transport_system.repository.EmployeeRepository employeeRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @GetMapping
@@ -36,9 +39,13 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public ResponseEntity<Employee> addEmployee(
+    public ResponseEntity<?> addEmployee(
             @Valid @RequestBody Employee employee
     ){
+        if (employeeRepository.findByEmail(employee.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body("Email is already registered.");
+        }
+        
         employee.setPassword(passwordEncoder.encode(employee.getPassword()));
 
         Employee saved = employeeService.saveEmployee(employee);

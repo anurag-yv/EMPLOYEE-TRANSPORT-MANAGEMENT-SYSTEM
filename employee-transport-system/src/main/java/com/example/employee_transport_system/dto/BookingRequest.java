@@ -16,6 +16,7 @@ public class BookingRequest {
     @Min(value = 1, message = "At least one seat must be booked")
     private int numberOfSeats = 1;
 
+    @jakarta.validation.constraints.NotBlank(message = "Description / Passenger Details is required")
     private String passengerDetails;
 
     public Long getEmployeeId() { return employeeId; }

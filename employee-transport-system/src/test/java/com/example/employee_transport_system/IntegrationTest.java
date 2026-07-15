@@ -5,6 +5,7 @@ import com.example.employee_transport_system.entity.Admin;
 import com.example.employee_transport_system.entity.Employee;
 import com.example.employee_transport_system.entity.Route;
 import com.example.employee_transport_system.repository.AdminRepository;
+import com.example.employee_transport_system.repository.AlertRepository;
 import com.example.employee_transport_system.repository.BookingRepository;
 import com.example.employee_transport_system.repository.EmployeeRepository;
 import com.example.employee_transport_system.repository.RouteRepository;
@@ -43,6 +44,9 @@ class IntegrationTest {
     private BookingRepository bookingRepo;
 
     @Autowired
+    private AlertRepository alertRepo;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private String employeeToken;
@@ -53,6 +57,7 @@ class IntegrationTest {
     @BeforeEach
     void setUp() {
         bookingRepo.deleteAll();
+        alertRepo.deleteAll();
         employeeRepo.deleteAll();
         adminRepo.deleteAll();
         routeRepo.deleteAll();
@@ -150,7 +155,24 @@ class IntegrationTest {
         mockMvc.perform(post("/api/booking")
                 .header("Authorization", "Bearer " + employeeToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"routeId\":" + routeId + ",\"numberOfSeats\":1}"))
+                .content("{\"routeId\":" + routeId + ",\"numberOfSeats\":1,\"passengerDetails\":\"John Doe\"}"))
+               .andExpect(status().isOk());
+    }
+
+    @Test
+    void testEmployeeCanCancelBooking() throws Exception {
+        String response = mockMvc.perform(post("/api/booking")
+                .header("Authorization", "Bearer " + employeeToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"routeId\":" + routeId + ",\"numberOfSeats\":1,\"passengerDetails\":\"John Doe\"}"))
+               .andExpect(status().isOk())
+               .andReturn().getResponse().getContentAsString();
+               
+        String idStr = response.split("\"id\":")[1].split(",")[0].trim();
+        Long bId = Long.parseLong(idStr);
+        
+        mockMvc.perform(delete("/api/booking/" + bId)
+                .header("Authorization", "Bearer " + employeeToken))
                .andExpect(status().isOk());
     }
 

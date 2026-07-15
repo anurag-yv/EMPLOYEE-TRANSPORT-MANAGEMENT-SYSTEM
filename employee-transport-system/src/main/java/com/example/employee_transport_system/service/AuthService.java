@@ -12,28 +12,14 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-/**
- * Service for handling authentication and user registration.
- * This class is designed to be proxied by Spring and is not intended
- * for manual extension.
- */
 @Service
 public class AuthService {
 
-    /** Repository for employee data. */
     private final EmployeeRepository employeeRepo;
-    /** Repository for admin data. */
     private final AdminRepository adminRepo;
-    /** Encoder for passwords. */
     private final PasswordEncoder passwordEncoder;
-    /** Utility for JWT operations. */
     private final JwtUtil jwtUtil;
 
-    /**
-     * Authenticates a user based on email and password.
-     * @param request the authentication request
-     * @return the authentication response containing JWT
-     */
     public AuthResponse authenticate(final AuthRequest request) {
         if (request.getEmail() == null || request.getPassword() == null) {
             throw new BadCredentialsException("Email and password are required");
@@ -65,10 +51,6 @@ public class AuthService {
         throw new BadCredentialsException("Invalid email or password");
     }
 
-    /**
-     * Registers a new user in the system.
-     * @param request the registration details
-     */
     public void register(final RegisterRequest request) {
         if (request.getEmail() == null || request.getPassword() == null
                 || request.getName() == null) {
@@ -113,10 +95,6 @@ public class AuthService {
         }
     }
 
-    /**
-     * Creates a new admin account. Only callable by existing authenticated ADMIN users.
-     * @param request the registration details for the new admin
-     */
     public void createAdmin(final RegisterRequest request) {
         if (request.getEmail() == null || request.getPassword() == null
                 || request.getName() == null) {
@@ -143,13 +121,6 @@ public class AuthService {
         }
     }
 
-    /**
-     * Constructor for AuthService.
-     * @param pEmployeeRepo repo for employees
-     * @param pAdminRepo repo for admins
-     * @param pPasswordEncoder encoder for passwords
-     * @param pJwtUtil util for tokens
-     */
     public AuthService(final EmployeeRepository pEmployeeRepo,
                        final AdminRepository pAdminRepo,
                        final PasswordEncoder pPasswordEncoder,

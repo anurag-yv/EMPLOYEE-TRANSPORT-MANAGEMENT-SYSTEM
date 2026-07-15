@@ -58,8 +58,15 @@ public final class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(
             final RuntimeException ex) {
+        ex.printStackTrace(); // Print to console for debugging
         Map<String, String> error = new HashMap<>();
-        error.put("message", ex.getMessage());
+        String msg = ex.getMessage();
+        Throwable cause = ex.getCause();
+        while (cause != null) {
+            msg += " | Cause: " + cause.getMessage();
+            cause = cause.getCause();
+        }
+        error.put("message", msg);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 

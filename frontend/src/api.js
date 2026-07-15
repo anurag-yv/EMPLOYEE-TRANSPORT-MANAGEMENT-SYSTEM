@@ -6,7 +6,6 @@ const api = axios.create({
     baseURL: API_BASE_URL,
 });
 
-// Add a request interceptor to add the JWT token to every request
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -18,12 +17,10 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle 403/401 errors globally
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401 || error.response?.status === 403) {
-            // Check if we are already on the login page to avoid infinite loops
             if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';

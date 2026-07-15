@@ -27,6 +27,9 @@ export default function Dashboard() {
   const [locationShared, setLocationShared] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showMap, setShowMap] = useState(false);
+  const mapRef = useRef(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
   const pollRef = useRef(null);
   const navigate = useNavigate();
 
@@ -46,8 +49,7 @@ export default function Dashboard() {
       setMyBookings(Array.isArray(b.data) ? b.data : []);
       setMyAlerts(Array.isArray(a.data) ? a.data : []);
       
-      // Fetch analytics only if user is NOT a citizen/employee who doesn't need global stats
-      // (Though currently we don't show global stats to them anymore)
+      // Analytics no longer fetched globally here
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, []);
@@ -71,12 +73,183 @@ export default function Dashboard() {
     return () => { clearInterval(pollRef.current); clearInterval(clock); };
   }, [navigate, fetchData]);
 
+  useEffect(() => {
+    if (showMap) {
+      if (!window.google) {
+        const script = document.createElement('script');
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => setMapLoaded(true);
+        script.onerror = () => {
+          console.error("Failed to load Google Maps script");
+          setMapError(true);
+        };
+        document.head.appendChild(script);
+      } else {
+        setMapLoaded(true);
+      }
+    }
+  }, [showMap]);
+
+  useEffect(() => {
+    if (mapLoaded && mapRef.current && showMap) {
+      const center = { lat: 12.9716, lng: 77.5946 };
+      
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: center,
+        zoom: 12,
+        styles: [
+          { elementType: 'geometry', stylers: [{ color: '#0f172a' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#0f172a' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#94a3b8' }] },
+          {
+            featureType: 'administrative.locality',
+            elementType: 'labels.text.fill',
+            stylers: [{ color: '#cbd5e1' }]
+          },
+          {
+            featureType: 'poi',
+            elementType: 'labels.text.fill',
+            stylers: [{ color: '#94a3b8' }]
+          },
+          {
+            featureType: 'road',
+            elementType: 'geometry',
+            stylers: [{ color: '#1e293b' }]
+          },
+          {
+            featureType: 'road',
+            elementType: 'geometry.stroke',
+            stylers: [{ color: '#334155' }]
+          },
+          {
+            featureType: 'road',
+            elementType: 'labels.text.fill',
+            stylers: [{ color: '#94a3b8' }]
+          },
+          {
+            featureType: 'water',
+            elementType: 'geometry',
+            stylers: [{ color: '#020617' }]
+          }
+        ]
+      });
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const pos = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            map.setCenter(pos);
+            new window.google.maps.Marker({
+              position: pos,
+              map: map,
+              title: "Your Location",
+              icon: {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: "#3b82f6",
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 2
+              }
+            });
+          },
+          (err) => {
+            console.warn("Geolocation warning:", err.message);
+          }
+        );
+      }
+
+      const locationCoords = {
+        'Terminal A': { lat: 12.9716, lng: 77.5946 },
+        'IT Park': { lat: 12.9616, lng: 77.6046 },
+        'Suburbs': { lat: 12.9816, lng: 77.5846 },
+        'City Center': { lat: 12.9726, lng: 77.5956 },
+        'Terminal B': { lat: 12.9916, lng: 77.5746 },
+        'HQ Building': { lat: 12.9516, lng: 77.6146 },
+        'Residential Area': { lat: 12.9416, lng: 77.5646 }
+      };
+
+      const geocoder = new window.google.maps.Geocoder();
+
+      routes.forEach((route) => {
+        if (mapSearch && 
+            !route.destination.toLowerCase().includes(mapSearch.toLowerCase()) && 
+            !route.source.toLowerCase().includes(mapSearch.toLowerCase())) {
+          return;
+        }
+
+        const getCoords = (locName, callback) => {
+          if (locationCoords[locName]) {
+            callback(locationCoords[locName]);
+          } else {
+            geocoder.geocode({ address: locName }, (results, status) => {
+              if (status === 'OK' && results[0]) {
+                callback({
+                  lat: results[0].geometry.location.lat(),
+                  lng: results[0].geometry.location.lng()
+                });
+              } else {
+                let hash = 0;
+                for (let i = 0; i < locName.length; i++) {
+                  hash = locName.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                const latOffset = ((hash % 100) / 2000) - 0.025;
+                const lngOffset = (((hash >> 8) % 100) / 2000) - 0.025;
+                callback({
+                  lat: 12.9716 + latOffset,
+                  lng: 77.5946 + lngOffset
+                });
+              }
+            });
+          }
+        };
+
+        getCoords(route.source, (sourceCoords) => {
+          getCoords(route.destination, (destCoords) => {
+            new window.google.maps.Marker({
+              position: sourceCoords,
+              map: map,
+              title: `Source: ${route.source}`,
+              label: { text: "S", color: "#ffffff", fontWeight: "bold" }
+            });
+
+            new window.google.maps.Marker({
+              position: destCoords,
+              map: map,
+              title: `Destination: ${route.destination}`,
+              label: { text: "D", color: "#ffffff", fontWeight: "bold" }
+            });
+
+            new window.google.maps.Polyline({
+              path: [sourceCoords, destCoords],
+              geodesic: true,
+              strokeColor: '#6366f1',
+              strokeOpacity: 0.8,
+              strokeWeight: 4,
+              map: map
+            });
+          });
+        });
+      });
+    }
+  }, [mapLoaded, routes, showMap, mapSearch]);
+
   const [bookingModal, setBookingModal] = useState(null); // stores the route to book
   const [seatCount, setSeatCount] = useState(1);
   const [passengerDetails, setPassengerDetails] = useState('');
 
   const handleBook = async () => {
     if (!bookingModal) return;
+    if (!passengerDetails.trim()) {
+      showToast('Description is required for booking.', 'error');
+      return;
+    }
     setBookingLoading(bookingModal.id);
     try { 
       await api.post('/api/booking', { 
@@ -311,7 +484,7 @@ export default function Dashboard() {
                     const seatsLeft = route.capacity - route.bookedSeats;
                     const isFull = seatsLeft <= 0;
                     const isLow = seatsLeft <= 5 && !isFull;
-                    const alreadyBooked = myBookings.some(b => b.route?.id === route.id);
+                    const alreadyBooked = myBookings.some(b => b.route?.id === route.id && (b.status === 'CONFIRMED' || !b.status));
                     return (
                       <motion.div key={route.id} initial={{ opacity:0, scale:0.96 }} animate={{ opacity:1, scale:1 }} exit={{ opacity:0 }} transition={{ delay:i*0.04 }}
                         className="glass-card" style={{ padding:'1.5rem', cursor:'default', display:'flex', flexDirection:'column', gap:'1rem' }}>
@@ -401,10 +574,12 @@ export default function Dashboard() {
                       <span className="font-mono" style={{ fontSize:'0.7rem', color:'#6366f1', background:'rgba(99,102,241,0.1)', padding:'0.2rem 0.5rem', borderRadius:6 }}>
                         #TP-{(b.id + 1000)}
                       </span>
-                      <button onClick={() => handleCancel(b.id)} disabled={cancelLoading === b.id}
-                        style={{ background:'rgba(244,63,94,0.08)',border:'1px solid rgba(244,63,94,0.2)',borderRadius:8,padding:'0.4rem 0.75rem',color:'#f43f5e',cursor:'pointer',fontWeight:700,fontSize:'0.75rem',display:'flex',alignItems:'center',gap:'0.3rem' }}>
-                        {cancelLoading === b.id ? <RefreshCw size={12} style={{ animation:'spin 1s linear infinite' }} /> : <><X size={12} />Cancel</>}
-                      </button>
+                      {b.status !== 'CANCELLED' && (
+                        <button onClick={() => handleCancel(b.id)} disabled={cancelLoading === b.id}
+                          style={{ background:'rgba(244,63,94,0.08)',border:'1px solid rgba(244,63,94,0.2)',borderRadius:8,padding:'0.4rem 0.75rem',color:'#f43f5e',cursor:'pointer',fontWeight:700,fontSize:'0.75rem',display:'flex',alignItems:'center',gap:'0.3rem' }}>
+                          {cancelLoading === b.id ? <RefreshCw size={12} style={{ animation:'spin 1s linear infinite' }} /> : <><X size={12} />Cancel</>}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -537,32 +712,21 @@ export default function Dashboard() {
                                 </div>
                             </div>
                             
-                            {/* Simulated Map Canvas */}
-                            <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-                                <div style={{ position: 'absolute', inset: 0, opacity: 0.1, backgroundImage: 'radial-gradient(circle, #6366f1 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-                                
-                                {/* Route Lines */}
-                                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                                    <line x1="20%" y1="30%" x2="50%" y2="50%" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="5,5" />
-                                    <line x1="80%" y1="20%" x2="50%" y2="50%" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="5,5" />
-                                    <line x1="40%" y1="80%" x2="50%" y2="50%" stroke="rgba(99,102,241,0.3)" strokeWidth="2" strokeDasharray="5,5" />
-                                </svg>
-
-                                {/* Markers */}
-                                {[
-                                    { x: '20%', y: '30%', name: 'Terminal A' },
-                                    { x: '80%', y: '20%', name: 'IT Park' },
-                                    { x: '40%', y: '80%', name: 'Suburbs' },
-                                    { x: '50%', y: '50%', name: 'City Center', main: true }
-                                ].map((marker, i) => (
-                                    <motion.div key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.1 }}
-                                        style={{ position: 'absolute', left: marker.x, top: marker.y, transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                                        <div style={{ width: marker.main ? 24 : 16, height: marker.main ? 24 : 16, borderRadius: '50%', background: marker.main ? '#6366f1' : '#10b981', margin: '0 auto', boxShadow: `0 0 15px ${marker.main ? '#6366f1' : '#10b981'}` }} />
-                                        <p style={{ fontSize: '0.65rem', fontWeight: 800, marginTop: '4px', whiteSpace: 'nowrap', textShadow: '0 2px 4px black' }}>{marker.name}</p>
-                                    </motion.div>
-                                ))}
-                            </div>
-
+                            {/* Google Maps Container */}
+                             <div ref={mapRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
+                                 {!mapLoaded && !mapError && (
+                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#94a3b8' }}>
+                                         <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginRight: '0.5rem' }} />
+                                         Loading Google Maps...
+                                     </div>
+                                 )}
+                                 {mapError && (
+                                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#f43f5e', padding: '1rem', textAlign: 'center' }}>
+                                         Failed to load Google Maps. Please check your internet connection or API Key.
+                                     </div>
+                                 )}
+                             </div>
+                            
                             <div style={{ position: 'absolute', bottom: '1rem', right: '1rem', zIndex: 10 }}>
                                 <button className="uber-btn uber-btn-accent" style={{ fontSize: '0.75rem', padding: '0.5rem 1rem' }} onClick={() => {
                                     setSupportMessage(`Requesting a new route from: ${mapSearch || 'Current Selection'} to IT Park`);
@@ -637,38 +801,45 @@ export default function Dashboard() {
                 <p className="section-sub">Track your transport usage and savings</p>
               </div>
 
-              <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-                <div className="glass-card">
-                  <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Total Commutes</h4>
-                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#6366f1' }}>{myBookings.length}</p>
-                </div>
-                <div className="glass-card">
-                  <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Money Saved (Est.)</h4>
-                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#10b981' }}>${myBookings.reduce((acc, b) => acc + (b.route?.budget || 12), 0)}</p>
-                </div>
-                <div className="glass-card">
-                  <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Carbon Reduced</h4>
-                  <p style={{ fontSize: '2rem', fontWeight: 900, color: '#0ea5e9' }}>{(myBookings.length * 2.4).toFixed(1)}kg</p>
-                </div>
-              </div>
+              {(() => {
+                const genuineBookings = myBookings.filter(b => b.status === 'CONFIRMED' || !b.status);
+                return (
+                  <>
+                    <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
+                      <div className="glass-card">
+                        <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Total Commutes</h4>
+                        <p style={{ fontSize: '2rem', fontWeight: 900, color: '#6366f1' }}>{genuineBookings.length}</p>
+                      </div>
+                      <div className="glass-card">
+                        <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Money Saved (Est.)</h4>
+                        <p style={{ fontSize: '2rem', fontWeight: 900, color: '#10b981' }}>${genuineBookings.reduce((acc, b) => acc + (b.route?.budget || 12), 0)}</p>
+                      </div>
+                      <div className="glass-card">
+                        <h4 style={{ color: '#64748b', fontSize: '0.875rem' }}>Carbon Reduced</h4>
+                        <p style={{ fontSize: '2rem', fontWeight: 900, color: '#0ea5e9' }}>{(genuineBookings.length * 2.4).toFixed(1)}kg</p>
+                      </div>
+                    </div>
 
-              <div className="glass-card" style={{ padding: '2rem', height: '300px' }}>
-                <h4 style={{ fontWeight: 800, marginBottom: '1.5rem' }}>Commute Frequency</h4>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[
-                    { name: 'Mon', uv: myBookings.length > 0 ? 2 : 0 },
-                    { name: 'Tue', uv: myBookings.length > 0 ? 3 : 0 },
-                    { name: 'Wed', uv: myBookings.length > 0 ? 1 : 0 },
-                    { name: 'Thu', uv: myBookings.length > 0 ? 4 : 0 },
-                    { name: 'Fri', uv: myBookings.length > 0 ? 2 : 0 }
-                  ]}>
+                    <div className="glass-card" style={{ padding: '2rem', height: '300px' }}>
+                      <h4 style={{ fontWeight: 800, marginBottom: '1.5rem' }}>Commute Frequency</h4>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { name: 'Mon', uv: genuineBookings.filter(b => b.bookedAt && new Date(b.bookedAt).getDay() === 1).length },
+                          { name: 'Tue', uv: genuineBookings.filter(b => b.bookedAt && new Date(b.bookedAt).getDay() === 2).length },
+                          { name: 'Wed', uv: genuineBookings.filter(b => b.bookedAt && new Date(b.bookedAt).getDay() === 3).length },
+                          { name: 'Thu', uv: genuineBookings.filter(b => b.bookedAt && new Date(b.bookedAt).getDay() === 4).length },
+                          { name: 'Fri', uv: genuineBookings.filter(b => b.bookedAt && new Date(b.bookedAt).getDay() === 5).length }
+                        ]}>
                     <XAxis dataKey="name" stroke="#94a3b8" />
                     <YAxis stroke="#94a3b8" />
-                    <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px'}} />
-                    <Bar dataKey="uv" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+                          <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{backgroundColor: '#1e293b', border: 'none', borderRadius: '8px'}} />
+                          <Bar dataKey="uv" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </>
+                );
+              })()}
             </motion.div>
           )}
 
@@ -710,18 +881,16 @@ export default function Dashboard() {
                       </select>
                     </div>
 
-                    {seatCount > 1 && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="input-group">
-                        <label className="input-label">Passenger Details</label>
-                        <textarea 
-                          className="uber-input-plain"
-                          placeholder="Enter names or details of other passengers..."
-                          rows={3}
-                          value={passengerDetails}
-                          onChange={e => setPassengerDetails(e.target.value)}
-                        />
-                      </motion.div>
-                    )}
+                    <div className="input-group">
+                      <label className="input-label">Description / Passenger Details <span style={{color: '#f43f5e'}}>*</span></label>
+                      <textarea 
+                        className="uber-input-plain"
+                        placeholder="Enter travel description or passenger names..."
+                        rows={3}
+                        value={passengerDetails}
+                        onChange={e => setPassengerDetails(e.target.value)}
+                      />
+                    </div>
 
                     <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>

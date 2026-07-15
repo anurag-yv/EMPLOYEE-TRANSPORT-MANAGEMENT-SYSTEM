@@ -43,115 +43,58 @@ public final class Booking {
     /** The timestamp when the booking was created. */
     private LocalDateTime bookedAt = LocalDateTime.now();
 
-    /**
-     * Gets the number of seats.
-     * @return seat count
-     */
     public int getNumberOfSeats() {
         return numberOfSeats;
     }
 
-    /**
-     * Sets the number of seats.
-     * @param pNumberOfSeats seat count
-     */
     public void setNumberOfSeats(final int pNumberOfSeats) {
         this.numberOfSeats = pNumberOfSeats;
     }
 
-    /**
-     * Gets passenger details.
-     * @return details string
-     */
     public String getPassengerDetails() {
         return passengerDetails;
     }
 
-    /**
-     * Sets passenger details.
-     * @param pPassengerDetails details string
-     */
     public void setPassengerDetails(final String pPassengerDetails) {
         this.passengerDetails = pPassengerDetails;
     }
 
-
-    /**
-     * Gets the booking ID.
-     * @return the ID
-     */
     public Long getId() {
         return id;
     }
 
-    /**
-     * Sets the booking ID.
-     * @param pId the ID
-     */
     public void setId(final Long pId) {
         this.id = pId;
     }
 
-    /**
-     * Gets the employee.
-     * @return the employee
-     */
     public Employee getEmployee() {
         return employee;
     }
 
-    /**
-     * Sets the employee.
-     * @param pEmployee the employee
-     */
     public void setEmployee(final Employee pEmployee) {
         this.employee = pEmployee;
     }
 
-    /**
-     * Gets the route.
-     * @return the route
-     */
     public Route getRoute() {
         return route;
     }
 
-    /**
-     * Sets the route.
-     * @param pRoute the route
-     */
     public void setRoute(final Route pRoute) {
         this.route = pRoute;
     }
 
-    /**
-     * Gets the status.
-     * @return status string
-     */
     public String getStatus() {
         return status;
     }
 
-    /**
-     * Sets the status.
-     * @param pStatus status string
-     */
     public void setStatus(final String pStatus) {
         this.status = pStatus;
     }
 
-    /**
-     * Gets the booking time.
-     * @return timestamp
-     */
     public LocalDateTime getBookedAt() {
         return bookedAt;
     }
 
-    /**
-     * Sets the booking time.
-     * @param pBookedAt timestamp
-     */
     public void setBookedAt(final LocalDateTime pBookedAt) {
         this.bookedAt = pBookedAt;
     }

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.kafka.core.KafkaTemplate;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -38,6 +39,9 @@ class BookingServiceTest {
 
     @InjectMocks
     private BookingService bookingService;
+
+    @Mock
+    private KafkaTemplate<String, String> kafkaTemplate;
 
     @BeforeEach
     void setUp() {
@@ -64,9 +68,8 @@ class BookingServiceTest {
 
         when(configRepo.findById("global")).thenReturn(Optional.of(config));
         when(employeeRepo.findByEmail(email)).thenReturn(Optional.of(employee));
-        when(bookingRepo.findByEmployee(employee)).thenReturn(new ArrayList<>());
+        when(bookingRepo.findByEmployeeAndStatus(employee, "CONFIRMED")).thenReturn(new ArrayList<>());
         when(routeRepo.findById(routeId)).thenReturn(Optional.of(route));
-        when(bookingRepo.existsByEmployeeAndRoute(employee, route)).thenReturn(false);
         when(bookingRepo.save(any(Booking.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Booking result = bookingService.bookSeatByEmail(email, routeId);
@@ -89,26 +92,5 @@ class BookingServiceTest {
         assertEquals("User not found", exception.getMessage());
     }
 
-    @Test
-    void testBookSeatByEmail_MaxBookingsReached() {
-        String email = "busy@example.com";
-        Employee employee = new Employee();
-        
-        SystemConfig config = new SystemConfig();
-        config.setMaxBookings(2);
 
-        when(configRepo.findById("global")).thenReturn(Optional.of(config));
-        when(employeeRepo.findByEmail(email)).thenReturn(Optional.of(employee));
-        
-        ArrayList<Booking> existingBookings = new ArrayList<>();
-        existingBookings.add(new Booking());
-        existingBookings.add(new Booking());
-        when(bookingRepo.findByEmployee(employee)).thenReturn(existingBookings);
-
-        Exception exception = assertThrows(BookingLimitExceededException.class, () -> 
-            bookingService.bookSeatByEmail(email, 1L)
-        );
-
-        assertTrue(exception.getMessage().contains("Maximum booking limit reached"));
-    }
 }

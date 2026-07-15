@@ -72,4 +72,10 @@ public class BookingController {
         bookingService.cancelBookingByEmail(email, id);
         return ResponseEntity.ok("Booking cancelled successfully");
     }
+
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<String> cancelBookingAdmin(@PathVariable Long id) {
+        bookingService.cancelBooking(id);
+        return ResponseEntity.ok("Booking cancelled by admin successfully");
+    }
 }
