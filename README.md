@@ -205,17 +205,6 @@ Deploy via Render's Blueprint feature by pointing it at this repository — it w
 
 ---
 
-## Contributing / TODOs
-
-This README was restructured for clarity and professionalism, but a few sections need repo-specific detail to be fully accurate:
-
-1. **API Reference table** — replace placeholders with real endpoints from your `@RestController` classes.
-2. **Screenshots/demo GIF** — add 2–3 screenshots of the Admin dashboard, booking flow, and analytics view under a `docs/` or `.github/assets/` folder and embed them near the top.
-3. **License** — currently marked "Proprietary. All rights reserved." Confirm this is intentional; if this is a portfolio piece, consider MIT/Apache-2.0 so reviewers can freely clone and run it.
-4. **Tests** — if you have any test files, add a `## Testing` section with the run command (`./mvnw test`, `npm test`).
-
----
-
 ## License
 
 Proprietary. All rights reserved.
