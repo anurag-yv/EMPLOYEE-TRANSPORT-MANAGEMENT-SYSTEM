@@ -20,6 +20,9 @@ const Login = () => {
             const res = await api.post('/api/auth/login', { email, password });
             const token = res.data.token;
             localStorage.setItem('token', token);
+            if (res.data.refreshToken) {
+                localStorage.setItem('refreshToken', res.data.refreshToken);
+            }
             const user = parseJwt(token);
             navigate(user.role === 'ADMIN' ? '/admin' : '/dashboard');
         } catch (err) {

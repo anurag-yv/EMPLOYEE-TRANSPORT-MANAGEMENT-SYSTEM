@@ -34,6 +34,7 @@ public class JwtFilter extends OncePerRequestFilter {
         String username = null;
         String jwt = null;
 
+        // Extract Bearer token from Authorization header
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             try {
@@ -43,6 +44,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
         }
 
+        // Set authentication if token is valid and no auth exists yet
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

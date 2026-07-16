@@ -1,33 +1,36 @@
 package com.example.employee_transport_system.controller;
 
 import com.example.employee_transport_system.entity.SystemConfig;
-import com.example.employee_transport_system.repository.SystemConfigRepository;
-import org.springframework.web.bind.annotation.*;
+import com.example.employee_transport_system.service.SystemConfigService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Controller for managing system configurations.
- */
 @RestController
 @RequestMapping("/api/config")
+@Tag(name = "System Configuration", description = "Endpoints for managing global settings (Admin only)")
 public class SystemConfigController {
 
-    private final SystemConfigRepository configRepo;
+    private final SystemConfigService configService;
 
-    public SystemConfigController(SystemConfigRepository configRepo) {
-        this.configRepo = configRepo;
+    public SystemConfigController(SystemConfigService configService) {
+        this.configService = configService;
     }
 
     @GetMapping
-    public SystemConfig getConfig() {
-        return configRepo.findById("global").orElseGet(() -> {
-            SystemConfig config = new SystemConfig();
-            return configRepo.save(config);
-        });
+    @Operation(summary = "Get the global system configuration")
+    public ResponseEntity<SystemConfig> getConfig() {
+        return ResponseEntity.ok(configService.getConfig());
     }
 
     @PutMapping
-    public SystemConfig updateConfig(@RequestBody SystemConfig newConfig) {
-        newConfig.setId("global");
-        return configRepo.save(newConfig);
+    @Operation(summary = "Update the global system configuration")
+    public ResponseEntity<SystemConfig> updateConfig(@RequestBody SystemConfig newConfig) {
+        return ResponseEntity.ok(configService.updateConfig(newConfig));
     }
 }

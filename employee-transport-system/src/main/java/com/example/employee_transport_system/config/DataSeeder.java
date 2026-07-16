@@ -17,9 +17,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class DataSeeder {
 
     @Bean
-    public CommandLineRunner loadData(EmployeeRepository empRepo, AdminRepository adminRepo, RouteRepository routeRepo, PasswordEncoder encoder) {
+    CommandLineRunner loadData(EmployeeRepository empRepo,
+                               AdminRepository adminRepo,
+                               RouteRepository routeRepo,
+                               PasswordEncoder encoder) {
         return args -> {
             System.out.println("[SEEDER] Starting data seeding check...");
+
+            // Seed test employee if none exists
             if (empRepo.count() == 0) {
                 System.out.println("[SEEDER] Seeding Employee...");
                 Employee e = new Employee();
@@ -29,6 +34,8 @@ public class DataSeeder {
                 e.setRole("EMPLOYEE");
                 empRepo.save(e);
             }
+
+            // Seed test admin if none exists
             if (adminRepo.count() == 0) {
                 System.out.println("[SEEDER] Seeding Admin...");
                 Admin a = new Admin();
@@ -38,6 +45,8 @@ public class DataSeeder {
                 a.setRole("ADMIN");
                 adminRepo.save(a);
             }
+
+            // Seed sample routes for demo
             if (routeRepo.count() == 0) {
                 System.out.println("[SEEDER] Seeding Routes...");
                 Route r1 = new Route();
@@ -48,7 +57,7 @@ public class DataSeeder {
                 r1.setBookedSeats(0);
                 r1.setBudget(1200.0);
                 routeRepo.save(r1);
- 
+
                 Route r2 = new Route();
                 r2.setSource("South Branch");
                 r2.setDestination("Main Office");

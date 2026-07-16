@@ -10,77 +10,70 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/**
- * Entity representing an Employee in the transport system.
- */
 @Entity
-@Table(name = "employees")
-public final class Employee {
+@Table(name = "employees", indexes = {
+    @jakarta.persistence.Index(name = "idx_employee_email", columnList = "email")
+})
+public final class Employee extends AbstractAuditable {
 
-    /** Minimum password length. */
     private static final int MIN_PWD_LEN = 4;
 
-    /** The unique identifier of the employee. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** The full name of the employee. */
     @NotBlank(message = "Name is required")
     private String name;
 
-    /** The unique email address of the employee. */
     @Email(message = "Invalid email format")
     @NotBlank(message = "Email is required")
     @Column(unique = true)
     private String email;
 
-    /** The encrypted password for authentication. */
     @NotBlank(message = "Password is required")
     @Size(min = MIN_PWD_LEN, message = "Password too short")
     private String password;
 
-    /** The system role assigned to this user (e.g., EMPLOYEE, CITIZEN). */
+    // EMPLOYEE, ADMIN, or CITIZEN - determines access level
     private String role = "Employee";
 
     public Long getId() {
         return id;
     }
 
-    public void setId(final Long pId) {
-        this.id = pId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {
         return name;
     }
 
-    public void setName(final String pName) {
-        this.name = pName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
         return email;
     }
 
-    public void setEmail(final String pEmail) {
-        this.email = pEmail;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPassword() {
         return password;
     }
 
-    public void setPassword(final String pPassword) {
-        this.password = pPassword;
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public String getRole() {
         return role;
     }
 
-    public void setRole(final String pRole) {
-        this.role = pRole;
+    public void setRole(String role) {
+        this.role = role;
     }
-
 }

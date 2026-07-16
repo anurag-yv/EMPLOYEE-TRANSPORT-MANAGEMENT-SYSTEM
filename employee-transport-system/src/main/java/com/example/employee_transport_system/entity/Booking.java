@@ -1,5 +1,6 @@
 package com.example.employee_transport_system.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -9,93 +10,102 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
-/**
- * Entity representing a trip booking.
- */
 @Entity
-@Table(name = "bookings")
-public final class Booking {
+@Table(name = "bookings", indexes = {
+    @jakarta.persistence.Index(name = "idx_booking_emp", columnList = "employee_id"),
+    @jakarta.persistence.Index(name = "idx_booking_route", columnList = "route_id"),
+    @jakarta.persistence.Index(name = "idx_booking_status", columnList = "status"),
+    @jakarta.persistence.Index(name = "idx_booking_idem", columnList = "idempotencyKey")
+})
+public final class Booking extends AbstractAuditable {
 
-    /** The unique identifier of the booking. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** The employee who made the booking. */
-    @ManyToOne
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
-    /** The route being booked. */
-    @ManyToOne
+    @ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
     @JoinColumn(name = "route_id")
     private Route route;
 
-    /** The number of seats booked. */
+    // Defaults to 1 seat for citizen bookings, can be modified by admin
     private int numberOfSeats = 1;
 
-    /** Details for other passengers if booking multiple seats. */
     private String passengerDetails;
 
-    /** The status of the booking (e.g., CONFIRMED). */
+    // CONFIRMED or CANCELLED
     private String status = "CONFIRMED";
 
-    /** The timestamp when the booking was created. */
     private LocalDateTime bookedAt = LocalDateTime.now();
+
+    // Idempotency key prevents duplicate bookings on retries
+    @Column(unique = true)
+    private String idempotencyKey;
 
     public int getNumberOfSeats() {
         return numberOfSeats;
     }
 
-    public void setNumberOfSeats(final int pNumberOfSeats) {
-        this.numberOfSeats = pNumberOfSeats;
+    public void setNumberOfSeats(int numberOfSeats) {
+        this.numberOfSeats = numberOfSeats;
     }
 
     public String getPassengerDetails() {
         return passengerDetails;
     }
 
-    public void setPassengerDetails(final String pPassengerDetails) {
-        this.passengerDetails = pPassengerDetails;
+    public void setPassengerDetails(String passengerDetails) {
+        this.passengerDetails = passengerDetails;
     }
 
     public Long getId() {
         return id;
     }
 
-    public void setId(final Long pId) {
-        this.id = pId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public Employee getEmployee() {
         return employee;
     }
 
-    public void setEmployee(final Employee pEmployee) {
-        this.employee = pEmployee;
+    public void setEmployee(Employee employee) {
+        this.employee = employee;
     }
 
     public Route getRoute() {
         return route;
     }
 
-    public void setRoute(final Route pRoute) {
-        this.route = pRoute;
+    public void setRoute(Route route) {
+        this.route = route;
     }
 
     public String getStatus() {
         return status;
     }
 
-    public void setStatus(final String pStatus) {
-        this.status = pStatus;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDateTime getBookedAt() {
         return bookedAt;
     }
 
-    public void setBookedAt(final LocalDateTime pBookedAt) {
-        this.bookedAt = pBookedAt;
+    public void setBookedAt(LocalDateTime bookedAt) {
+        this.bookedAt = bookedAt;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 }

@@ -15,10 +15,11 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
      */
     List<Alert> findByResolvedFalseOrderByTimestampDesc();
 
-    /**
-     * Finds alerts for a specific employee ordered by timestamp.
-     * @param employee the employee
-     * @return list of user alerts
-     */
+    org.springframework.data.domain.Page<Alert> findByResolvedFalseOrderByTimestampDesc(
+            org.springframework.data.domain.Pageable pageable);
+
     List<Alert> findByEmployeeOrderByTimestampDesc(Employee employee);
+
+    org.springframework.data.domain.Page<Alert> findByEmployeeOrderByTimestampDesc(
+            Employee employee, org.springframework.data.domain.Pageable pageable);
 }

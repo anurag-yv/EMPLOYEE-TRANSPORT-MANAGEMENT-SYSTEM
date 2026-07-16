@@ -9,52 +9,44 @@ import jakarta.persistence.Version;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
-/**
- * Entity representing a transport route.
- */
 @Entity
-@Table(name = "routes")
-public final class Route {
+@Table(name = "routes", indexes = {
+    @jakarta.persistence.Index(name = "idx_route_src_dest", columnList = "source,destination")
+})
+public final class Route extends AbstractAuditable {
 
-    /** The unique identifier of the route. */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** The starting location. */
     @NotBlank(message = "From location is required")
     private String source;
 
-    /** The destination location. */
     @NotBlank(message = "To location is required")
     private String destination;
 
-    /** The total seat capacity of the vehicle. */
     @Min(value = 1, message = "Capacity must be at least 1")
     private int capacity;
 
-    /** The scheduled pickup time. */
     private String pickupTime;
 
-    /** The number of seats already booked. */
+    // Tracks occupancy for capacity management
     private int bookedSeats = 0;
 
-    /** Optimistic locking version field. */
+    // Optimistic locking version for concurrent update protection
     @Version
     private Long version;
 
-    /** The budget or cost allocated to this trip. */
     private double budget;
 
     public Route() {
     }
 
-    public Route(final String pSource, final String pDestination,
-                 final int pCapacity, final String pPickupTime) {
-        this.source = pSource;
-        this.destination = pDestination;
-        this.capacity = pCapacity;
-        this.pickupTime = pPickupTime;
+    public Route(String source, String destination, int capacity, String pickupTime) {
+        this.source = source;
+        this.destination = destination;
+        this.capacity = capacity;
+        this.pickupTime = pickupTime;
         this.bookedSeats = 0;
     }
 
@@ -62,55 +54,55 @@ public final class Route {
         return id;
     }
 
-    public void setId(final Long pId) {
-        this.id = pId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getSource() {
         return source;
     }
 
-    public void setSource(final String pSource) {
-        this.source = pSource;
+    public void setSource(String source) {
+        this.source = source;
     }
 
     public String getDestination() {
         return destination;
     }
 
-    public void setDestination(final String pDestination) {
-        this.destination = pDestination;
+    public void setDestination(String destination) {
+        this.destination = destination;
     }
 
     public int getCapacity() {
         return capacity;
     }
 
-    public void setCapacity(final int pCapacity) {
-        this.capacity = pCapacity;
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
     }
 
     public String getPickupTime() {
         return pickupTime;
     }
 
-    public void setPickupTime(final String pPickupTime) {
-        this.pickupTime = pPickupTime;
+    public void setPickupTime(String pickupTime) {
+        this.pickupTime = pickupTime;
     }
 
     public int getBookedSeats() {
         return bookedSeats;
     }
 
-    public void setBookedSeats(final int pBookedSeats) {
-        this.bookedSeats = pBookedSeats;
+    public void setBookedSeats(int bookedSeats) {
+        this.bookedSeats = bookedSeats;
     }
 
     public double getBudget() {
         return budget;
     }
 
-    public void setBudget(final double pBudget) {
-        this.budget = pBudget;
+    public void setBudget(double budget) {
+        this.budget = budget;
     }
 }

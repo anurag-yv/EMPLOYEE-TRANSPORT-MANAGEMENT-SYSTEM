@@ -21,9 +21,11 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
-    public SecurityConfig(JwtFilter jwtFilter) {
+    public SecurityConfig(final JwtFilter jwtFilter, final RateLimitingFilter rateLimitingFilter) {
         this.jwtFilter = jwtFilter;
+        this.rateLimitingFilter = rateLimitingFilter;
     }
 
     @Bean
@@ -32,7 +34,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(final HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -40,6 +42,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // Admin-only endpoints
                 .requestMatchers(HttpMethod.DELETE, "/api/employees/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/employees").hasRole("ADMIN")
@@ -51,8 +55,15 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             );
 
+        http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-        http.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
+        http.headers(headers -> headers
+            .frameOptions(frame -> frame.sameOrigin())
+            .contentSecurityPolicy(csp -> csp.policyDirectives(
+                    "default-src 'self'; frame-ancestors 'self'; "
+                    + "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+                    + "style-src 'self' 'unsafe-inline';"))
+        );
 
         return http.build();
     }

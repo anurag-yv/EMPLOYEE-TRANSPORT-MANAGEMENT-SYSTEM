@@ -1,62 +1,75 @@
-# Employee Transport System
+# Employee Transport Management System
 
-A full-stack application for managing company transport logistics, featuring route tracking, multi-seat bookings, and an administrative dashboard.
+A full-stack fleet coordination platform with JWT security and event-driven architecture.
 
 ## Features
 
-- **Role-Based Access**: Dedicated interfaces for Admins, Riders, and standard Employees/Citizens.
-- **Booking Management**: Multi-seat reservations, route capacity tracking, and status monitoring.
-- **Admin Dashboard**: Centralized management for routes, bookings, and personnel assignments.
-- **Safety Features**: Integrated SOS alerts and location sharing workflows.
-- **Reporting**: Visualization of route utilization and commute trends.
+| Feature | Description |
+|---|---|
+| Role-based access control | Four roles (Admin, Employee, Rider, Citizen) with method-level security |
+| Concurrent seat booking | Uses JPA `@Version` optimistic locking with retry logic |
+| Idempotent reservations | Optional idempotency key prevents duplicate bookings |
+| Event-driven architecture | Booking events published to Kafka asynchronously |
+| SOS alerts | Employees can send typed alerts; admins can respond and resolve |
+| Token refresh | Automatic JWT refresh on 401 responses via axios interceptor |
+| Rate limiting | IP-based rate limiting at 100 requests/minute |
+| Paginated APIs | All list endpoints support pagination with sorting |
 
 ## Tech Stack
 
-### Backend
-- Spring Boot 3.2.3 (Java 21)
-- Spring Security (JWT Authentication)
-- Spring Data JPA
-- MySQL
+**Backend:** Java 21, Spring Boot 3.2.3, Spring Security, JJWT, JPA/Hibernate, MySQL 8, Kafka, Redis, Bucket4j
 
-### Frontend
-- React (Vite)
-- Recharts
-- Axios
+**Frontend:** React 18, Vite, Axios, Recharts
 
 ## Getting Started
 
 ### Prerequisites
 - JDK 21+
 - Node.js 18+
-- MySQL Server
+- MySQL 8
 
-### Backend Setup
-1. Navigate to the `employee-transport-system` directory.
-2. Update `src/main/resources/application.properties` with your MySQL credentials.
-3. Run the application:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
+### Backend
+```bash
+cd employee-transport-system
+export JWT_SECRET=your-256-bit-secret-min-32-chars
+./mvnw spring-boot:run
+```
+API: http://localhost:1001
 
-### Frontend Setup
-1. Navigate to the `frontend` directory.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file and set `VITE_API_BASE_URL=http://localhost:8081`.
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+### Frontend
+```bash
+cd frontend
+npm install
+echo "VITE_API_BASE_URL=http://localhost:1001" > .env
+npm run dev
+```
+UI: http://localhost:5173
 
-## Deployment
+## API Endpoints
 
-Configured for Render deployment using the included `render.yaml`.
-Required backend environment variables:
-- `MYSQL_URL`
-- `MYSQL_USER`
-- `MYSQL_PASSWORD`
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | /api/auth/register | Register new employee |
+| POST | /api/auth/login | Authenticate |
+| POST | /api/auth/refresh | Refresh token |
+| GET | /api/routes | List routes |
+| POST | /api/routes | Create route (admin) |
+| GET | /api/booking | All bookings |
+| POST | /api/booking | Create booking |
+| DELETE | /api/booking/{id} | Cancel booking |
+| POST | /api/alerts | Send alert |
+| PUT | /api/alerts/{id}/resolve | Resolve alert (admin) |
 
-## License
-Proprietary. All rights reserved.
+## Challenges & Solutions
+
+### Concurrent Seat Reservation
+Naive read-modify-save causes race conditions. Uses `@Version` field for optimistic locking with a 3-retry back-off loop.
+
+### Idempotent Bookings
+Clients can provide an idempotency key to prevent duplicate bookings on retries. The key has a UNIQUE constraint.
+
+### Refresh Token Rotation
+Tokens rotate on every use with 7-day expiry. The axios interceptor handles 401s transparently.
+
+### Resilient Caching
+Redis errors fall back to database reads without causing 500 errors.

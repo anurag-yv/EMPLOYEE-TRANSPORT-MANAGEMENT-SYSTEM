@@ -16,7 +16,14 @@ const Register = () => {
         setLoading(true);
         setError('');
         try {
-            await api.post('/api/auth/register', { ...formData, email: formData.email.toLowerCase().trim() });
+            // Use different endpoints based on role
+            // Note: ADMIN registration goes through /api/auth/admin/create-admin
+            // EMPLOYEE and CITIZEN go through /api/auth/register
+            const endpoint = formData.role === 'ADMIN' 
+                ? '/api/auth/admin/create-admin' 
+                : '/api/auth/register';
+            
+            await api.post(endpoint, { ...formData, email: formData.email.toLowerCase().trim() });
             setSuccess(true);
             setTimeout(() => navigate('/login'), 2500);
         } catch (err) {

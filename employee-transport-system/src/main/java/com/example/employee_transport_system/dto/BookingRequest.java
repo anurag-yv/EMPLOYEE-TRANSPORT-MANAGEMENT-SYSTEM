@@ -19,15 +19,45 @@ public class BookingRequest {
     @jakarta.validation.constraints.NotBlank(message = "Description / Passenger Details is required")
     private String passengerDetails;
 
-    public Long getEmployeeId() { return employeeId; }
-    public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
+    private String idempotencyKey;
 
-    public Long getRouteId() { return routeId; }
-    public void setRouteId(Long routeId) { this.routeId = routeId; }
+    public Long getEmployeeId() {
+        return employeeId;
+    }
 
-    public int getNumberOfSeats() { return numberOfSeats; }
-    public void setNumberOfSeats(int numberOfSeats) { this.numberOfSeats = numberOfSeats; }
+    public void setEmployeeId(final Long employeeId) {
+        this.employeeId = employeeId;
+    }
 
-    public String getPassengerDetails() { return passengerDetails; }
-    public void setPassengerDetails(String passengerDetails) { this.passengerDetails = passengerDetails; }
+    public Long getRouteId() {
+        return routeId;
+    }
+
+    public void setRouteId(final Long routeId) {
+        this.routeId = routeId;
+    }
+
+    public int getNumberOfSeats() {
+        return numberOfSeats;
+    }
+
+    public void setNumberOfSeats(final int numberOfSeats) {
+        this.numberOfSeats = numberOfSeats;
+    }
+
+    public String getPassengerDetails() {
+        return passengerDetails;
+    }
+
+    public void setPassengerDetails(final String passengerDetails) {
+        this.passengerDetails = passengerDetails;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(final String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
+    }
 }

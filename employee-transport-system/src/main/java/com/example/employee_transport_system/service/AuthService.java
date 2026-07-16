@@ -6,11 +6,17 @@ import com.example.employee_transport_system.dto.AuthResponse;
 import com.example.employee_transport_system.dto.RegisterRequest;
 import com.example.employee_transport_system.entity.Admin;
 import com.example.employee_transport_system.entity.Employee;
+import com.example.employee_transport_system.entity.RefreshToken;
 import com.example.employee_transport_system.repository.AdminRepository;
 import com.example.employee_transport_system.repository.EmployeeRepository;
+import com.example.employee_transport_system.repository.RefreshTokenRepository;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -19,39 +25,81 @@ public class AuthService {
     private final AdminRepository adminRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final RefreshTokenRepository refreshTokenRepo;
 
-    public AuthResponse authenticate(final AuthRequest request) {
+    @Transactional
+    public AuthResponse authenticate(AuthRequest request) {
         if (request.getEmail() == null || request.getPassword() == null) {
             throw new BadCredentialsException("Email and password are required");
         }
 
         String email = request.getEmail().toLowerCase().trim();
 
-        // Try Employee first
         Employee employee = employeeRepo.findByEmail(email).orElse(null);
         if (employee != null) {
             if (passwordEncoder.matches(request.getPassword(),
                     employee.getPassword())) {
                 String token = jwtUtil.generateToken(employee.getEmail(),
                         employee.getRole().toUpperCase());
-                return new AuthResponse(token);
+                String refreshToken = createRefreshToken(employee.getEmail());
+                return new AuthResponse(token, refreshToken);
             }
         }
 
-        // Try Admin next
         Admin admin = adminRepo.findByEmail(email).orElse(null);
         if (admin != null) {
             if (passwordEncoder.matches(request.getPassword(),
                     admin.getPassword())) {
                 String token = jwtUtil.generateToken(admin.getEmail(), "ADMIN");
-                return new AuthResponse(token);
+                String refreshToken = createRefreshToken(admin.getEmail());
+                return new AuthResponse(token, refreshToken);
             }
         }
 
         throw new BadCredentialsException("Invalid email or password");
     }
 
-    public void register(final RegisterRequest request) {
+    @Transactional
+    public String createRefreshToken(String email) {
+        refreshTokenRepo.deleteByEmail(email);
+        RefreshToken rt = new RefreshToken();
+        rt.setEmail(email);
+        rt.setToken(UUID.randomUUID().toString());
+        rt.setExpiryDate(Instant.now().plusMillis(jwtUtil.getRefreshExpirationMs()));
+        refreshTokenRepo.save(rt);
+        return rt.getToken();
+    }
+
+    @Transactional
+    public AuthResponse refreshAccessToken(String refreshToken) {
+        RefreshToken rt = refreshTokenRepo.findByToken(refreshToken)
+                .orElseThrow(() -> new BadCredentialsException("Invalid refresh token"));
+        if (rt.getExpiryDate().isBefore(Instant.now())) {
+            refreshTokenRepo.delete(rt);
+            throw new BadCredentialsException("Refresh token was expired. Please sign in again.");
+        }
+
+        String email = rt.getEmail();
+        String role = "EMPLOYEE";
+        Employee employee = employeeRepo.findByEmail(email).orElse(null);
+        if (employee == null) {
+            Admin admin = adminRepo.findByEmail(email).orElse(null);
+            if (admin != null) {
+                role = "ADMIN";
+            } else {
+                throw new BadCredentialsException("User not found for token");
+            }
+        } else {
+            role = employee.getRole().toUpperCase();
+        }
+
+        String newAccessToken = jwtUtil.generateToken(email, role);
+        refreshTokenRepo.delete(rt);
+        String newRefreshToken = createRefreshToken(email);
+        return new AuthResponse(newAccessToken, newRefreshToken);
+    }
+
+    public void register(RegisterRequest request) {
         if (request.getEmail() == null || request.getPassword() == null
                 || request.getName() == null) {
             throw new RuntimeException("All fields are required.");
@@ -65,8 +113,6 @@ public class AuthService {
             throw new RuntimeException("Email is already registered.");
         }
 
-        // Public registration never creates ADMIN accounts.
-        // Any "ADMIN" role sent by the client is ignored — force EMPLOYEE.
         try {
             String effectiveRole = request.getRole();
             if (effectiveRole != null && "ADMIN".equalsIgnoreCase(effectiveRole)) {
@@ -95,7 +141,7 @@ public class AuthService {
         }
     }
 
-    public void createAdmin(final RegisterRequest request) {
+    public void createAdmin(RegisterRequest request) {
         if (request.getEmail() == null || request.getPassword() == null
                 || request.getName() == null) {
             throw new RuntimeException("All fields are required.");
@@ -121,14 +167,16 @@ public class AuthService {
         }
     }
 
-    public AuthService(final EmployeeRepository pEmployeeRepo,
-                       final AdminRepository pAdminRepo,
-                       final PasswordEncoder pPasswordEncoder,
-                       final JwtUtil pJwtUtil) {
-        this.employeeRepo = pEmployeeRepo;
-        this.adminRepo = pAdminRepo;
-        this.passwordEncoder = pPasswordEncoder;
-        this.jwtUtil = pJwtUtil;
+    public AuthService(EmployeeRepository employeeRepo,
+                       AdminRepository adminRepo,
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil,
+                       RefreshTokenRepository refreshTokenRepo) {
+        this.employeeRepo = employeeRepo;
+        this.adminRepo = adminRepo;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.refreshTokenRepo = refreshTokenRepo;
     }
 
 }

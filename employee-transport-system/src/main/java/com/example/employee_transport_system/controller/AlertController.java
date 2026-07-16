@@ -1,64 +1,90 @@
 package com.example.employee_transport_system.controller;
 
 import com.example.employee_transport_system.entity.Alert;
-import com.example.employee_transport_system.entity.Employee;
-import com.example.employee_transport_system.repository.AlertRepository;
-import com.example.employee_transport_system.repository.EmployeeRepository;
+import com.example.employee_transport_system.service.AlertService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/alerts")
+@Tag(name = "Alerts Management", description = "Endpoints for user notifications and safety alerts")
 public class AlertController {
 
-    private final AlertRepository alertRepository;
-    private final EmployeeRepository employeeRepository;
+    private final AlertService alertService;
 
-    public AlertController(AlertRepository alertRepository, EmployeeRepository employeeRepository) {
-        this.alertRepository = alertRepository;
-        this.employeeRepository = employeeRepository;
+    public AlertController(AlertService alertService) {
+        this.alertService = alertService;
     }
 
     @PostMapping
-    public Alert createAlert(@RequestBody Alert alert) {
+    @Operation(summary = "Create/raise a new alert")
+    public ResponseEntity<Alert> createAlert(@RequestBody Alert alert) {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Employee employee = employeeRepository.findByEmail(email).orElse(null);
-        alert.setEmployee(employee);
-        return alertRepository.save(alert);
+        Alert saved = alertService.createAlert(alert, email);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @GetMapping("/active")
-    public List<Alert> getActiveAlerts() {
-        return alertRepository.findByResolvedFalseOrderByTimestampDesc();
-    }
- 
-    @GetMapping("/my")
-    public List<Alert> getMyAlerts() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        Employee employee = employeeRepository.findByEmail(email).orElse(null);
-        if (employee == null) return java.util.Collections.emptyList();
-        return alertRepository.findByEmployeeOrderByTimestampDesc(employee);
-    }
-
-    @PutMapping("/{id}/respond")
-    public Alert respondToAlert(@PathVariable Long id, @RequestBody java.util.Map<String, String> payload) {
-        Alert alert = alertRepository.findById(id).orElseThrow();
-        alert.setAdminResponse(payload.get("response"));
-        alert.setRespondedAt(java.time.LocalDateTime.now());
-        alert.setResolved(true);
-        return alertRepository.save(alert);
-    }
-
-    @PutMapping("/{id}/resolve")
-    public Alert resolveAlert(@PathVariable Long id) {
-        Alert alert = alertRepository.findById(id).orElseThrow();
-        alert.setResolved(true);
-        alert.setRespondedAt(java.time.LocalDateTime.now());
-        if (alert.getAdminResponse() == null) {
-            alert.setAdminResponse("Resolved by Administrator");
+    @Operation(summary = "Get all unresolved alerts (supports optional pagination)")
+    public ResponseEntity<?> getActiveAlerts(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue = "timestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        if (page == null || size == null) {
+            return ResponseEntity.ok(alertService.getActiveAlerts());
         }
-        return alertRepository.save(alert);
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return ResponseEntity.ok(alertService.getActiveAlerts(pageable));
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "Get current user's alerts (supports optional pagination)")
+    public ResponseEntity<?> getMyAlerts(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(defaultValue = "timestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (page == null || size == null) {
+            return ResponseEntity.ok(alertService.getMyAlerts(email));
+        }
+        Sort sort = sortDir.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        return ResponseEntity.ok(alertService.getMyAlerts(email, pageable));
+    }
+
+    // Admin responds with a message and marks the alert as resolved
+    @PutMapping("/{id}/respond")
+    @Operation(summary = "Admin responds to a specific alert")
+    public ResponseEntity<Alert> respondToAlert(@PathVariable Long id,
+                                                 @RequestBody java.util.Map<String, String> payload) {
+        return ResponseEntity.ok(alertService.respondToAlert(id, payload.get("response")));
+    }
+
+    // Quick resolve without custom response
+    @PutMapping("/{id}/resolve")
+    @Operation(summary = "Admin marks alert resolved directly")
+    public ResponseEntity<Alert> resolveAlert(@PathVariable Long id) {
+        return ResponseEntity.ok(alertService.resolveAlert(id));
     }
 }

@@ -17,6 +17,5 @@ public class BookingEventConsumer {
     @KafkaListener(topics = "booking-events", groupId = "transport-system")
     public void listen(final String eventJson) {
         LOGGER.info("Received booking event: {}", eventJson);
-       
     }
 }

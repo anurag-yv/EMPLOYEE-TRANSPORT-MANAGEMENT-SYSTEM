@@ -34,6 +34,9 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private com.example.employee_transport_system.repository.RefreshTokenRepository refreshTokenRepo;
+
     @InjectMocks
     private AuthService authService;
 
@@ -73,6 +76,7 @@ class AuthServiceTest {
         when(employeeRepo.findByEmail(anyString())).thenReturn(Optional.of(employee));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
         when(jwtUtil.generateToken(anyString(), anyString())).thenReturn("mockToken");
+        when(jwtUtil.getRefreshExpirationMs()).thenReturn(86400000L);
 
         AuthResponse response = authService.authenticate(request);
 

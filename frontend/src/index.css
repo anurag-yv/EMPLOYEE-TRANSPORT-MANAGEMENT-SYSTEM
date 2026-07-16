@@ -667,6 +667,7 @@ tbody tr:hover { background: #f9fafb; }
   .grid-main { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .grid-2-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {
@@ -681,7 +682,7 @@ tbody tr:hover { background: #f9fafb; }
 
   .page-container { padding: 1.5rem 1rem; }
   .page-title { font-size: 1.5rem; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.875rem; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.875rem; }
   .grid-2 { grid-template-columns: 1fr; }
   .grid-3 { grid-template-columns: 1fr; }
   .grid-main { grid-template-columns: 1fr; }
@@ -695,4 +696,62 @@ tbody tr:hover { background: #f9fafb; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
   .stat-value { font-size: 1.5rem; }
   .page-header { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 560px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .stat-card { padding: 1.125rem; }
+  .page-container { padding: 1rem 0.75rem; }
+}
+
+/* Alert items responsive - used in Overview tab for Alerts & Queries */
+.alerts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Override grid-2 when combined with alerts-grid to ensure flex layout */
+.grid-2.alerts-grid {
+  display: flex !important;
+  grid-template-columns: none !important;
+}
+
+/* Alert item styles */
+.alert-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.alert-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.alert-item-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .alert-item-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .alert-item-footer button {
+    width: 100%;
+  }
 }

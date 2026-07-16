@@ -294,8 +294,8 @@ const AdminDashboard = () => {
                                 ))}
                             </div>
 
-                            {/* Charts Row */}
-                            <div className="grid-2" style={{ marginTop: '0.5rem' }}>
+                            {/* Charts Row - Fixed: Each item now takes full width on smaller screens */}
+                            <div className="grid-2 alerts-grid" style={{ marginTop: '0.5rem' }}>
                                 {/* Fleet Occupancy */}
                                 <div className="glass-card">
                                     <div className="flex-between" style={{ marginBottom: '1.75rem' }}>
@@ -335,7 +335,7 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
 
-                                 {/* Alerts & Queries */}
+                                {/* Alerts & Queries - Fixed: Better responsive layout */}
                                 <div className="glass-card" style={{ border: alerts.some(a => a.type === 'SOS') ? '1px solid rgba(244,63,94,0.4)' : '1px solid var(--border-glass)' }}>
                                     <div className="flex-between" style={{ marginBottom: '1.75rem' }}>
                                         <h3 className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -343,24 +343,27 @@ const AdminDashboard = () => {
                                         </h3>
                                         {alerts.length > 0 && <span className="badge badge-error animate-pulse-slow">{alerts.length} Active</span>}
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                                    <div className="alerts-grid">
                                         {alerts.map((alert) => (
-                                            <div key={alert.id} className="glass-card" style={{ padding: '1rem', background: alert.type === 'SOS' ? 'rgba(244,63,94,0.05)' : 'rgba(255,255,255,0.02)' }}>
-                                                <div className="flex-between" style={{ marginBottom: '0.5rem' }}>
-                                                    <span className={`badge ${alert.type === 'SOS' ? 'badge-error' : alert.type === 'QUERY' ? 'badge-info' : 'badge-warning'}`}>{alert.type === 'QUERY' ? 'Citizen Query' : alert.type}</span>
+                                            <div key={alert.id} className="glass-card alert-item" style={{ padding: '1rem', background: alert.type === 'SOS' ? 'rgba(244,63,94,0.05)' : 'rgba(255,255,255,0.02)' }}>
+                                                <div className="alert-item-header">
+                                                    <span className={`badge ${alert.type === 'SOS' ? 'badge-error' : alert.type === 'QUERY' ? 'badge-info' : 'badge-warning'}`}>
+                                                        {alert.type === 'QUERY' ? 'Citizen Query' : alert.type}
+                                                    </span>
                                                     <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{new Date(alert.timestamp).toLocaleTimeString()}</span>
                                                 </div>
                                                 <p style={{ fontWeight: 800, fontSize: '0.875rem', marginBottom: '0.25rem' }}>{alert.employee?.name || 'Unknown User'}</p>
                                                 <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.75rem' }}>{alert.message}</p>
-                                                <div className="flex-between" style={{ gap: '1rem', marginTop: '0.5rem' }}>
-                                                    <span style={{ fontSize: '0.7rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '0.35rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                                                        <MapPin size={12} style={{ flexShrink: 0 }} /> 
-                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{alert.location || 'Unknown Location'}</span>
+                                                <div className="alert-item-footer">
+                                                    <span style={{ fontSize: '0.7rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                                                        <MapPin size={12} style={{ flexShrink: 0 }} />
+                                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{alert.location || 'Unknown Location'}</span>
                                                     </span>
                                                     <button 
                                                         onClick={(e) => { e.stopPropagation(); setSelectedAlert(alert); setShowRespondModal(true); }}
                                                         disabled={resolveLoading === alert.id}
-                                                        style={{ flexShrink: 0, background: '#6366f1', color: 'white', border: 'none', borderRadius: '6px', padding: '0.4rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', position: 'relative', zIndex: 10 }}
+                                                        className="uber-btn uber-btn-accent"
+                                                        style={{ flexShrink: 0, padding: '0.4rem 0.8rem', fontSize: '0.75rem', width: 'auto', minWidth: '80px' }}
                                                     >
                                                         {resolveLoading === alert.id ? '...' : 'Respond'}
                                                     </button>
@@ -375,7 +378,7 @@ const AdminDashboard = () => {
                                             </div>
                                         )}
                                     </div>
-                            </div>
+                                </div>
                             </div>
                         </motion.div>
                     )}
@@ -423,62 +426,62 @@ const AdminDashboard = () => {
                                                                          className={`progress-fill ${pct > 80 ? 'progress-fill-danger' : ''}`}
                                                                          style={{ width: `${pct}%` }}
                                                                      />
-                                                                 </div>
-                                                                 <span className="font-mono" style={{ fontSize: '0.7rem', color: '#94a3b8', flexShrink: 0 }}>{r.bookedSeats}/{r.capacity}</span>
-                                                             </div>
-                                                         </td>
-                                                         <td style={{ padding: '1rem' }}>
-                                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                                                 <button
-                                                                     onClick={() => fetchRouteDetails(r.id)}
-                                                                     className="uber-btn-icon"
-                                                                     title="View Bookings"
-                                                                     style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)' }}
-                                                                 >
-                                                                     <Users size={14} />
-                                                                 </button>
-                                                                 
-                                                                 {(() => {
-                                                                     const assignedBooking = allBookings.find(b => b.route?.id === r.id && b.status === 'CONFIRMED' && b.employee?.role !== 'CITIZEN');
-                                                                     if (assignedBooking) {
-                                                                         return (
-                                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '0.2rem 0.4rem', borderRadius: '8px' }}>
-                                                                                 <span className="badge" style={{ color: '#6366f1', padding: '0', fontSize: '0.7rem', background: 'transparent' }}>
-                                                                                     {assignedBooking.employee?.name || 'Assigned'}
-                                                                                 </span>
-                                                                                 <button
-                                                                                     onClick={() => handleUnassignRide(assignedBooking.id)}
-                                                                                     title="Unassign"
-                                                                                     style={{ background: 'transparent', border: 'none', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
-                                                                                 >
-                                                                                     <X size={12} />
-                                                                                 </button>
-                                                                             </div>
-                                                                         );
-                                                                     }
-                                                                     return (
-                                                                         <button
-                                                                             onClick={() => { setAssignData({ ...assignData, routeId: r.id }); setShowAssignModal(true); }}
-                                                                             className="uber-btn-icon"
-                                                                             title="Assign Ride"
-                                                                             style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}
-                                                                         >
-                                                                             <Plus size={14} />
-                                                                         </button>
-                                                                     );
-                                                                 })()}
+                                                                </div>
+                                                                <span className="font-mono" style={{ fontSize: '0.7rem', color: '#94a3b8', flexShrink: 0 }}>{r.bookedSeats}/{r.capacity}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ padding: '1rem' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                                                <button
+                                                                    onClick={() => fetchRouteDetails(r.id)}
+                                                                    className="uber-btn-icon"
+                                                                    title="View Bookings"
+                                                                    style={{ background: 'rgba(99,102,241,0.08)', color: '#6366f1', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)' }}
+                                                                >
+                                                                    <Users size={14} />
+                                                                </button>
+                                                                
+                                                                {(() => {
+                                                                    const assignedBooking = allBookings.find(b => b.route?.id === r.id && b.status === 'CONFIRMED' && b.employee?.role !== 'CITIZEN');
+                                                                    if (assignedBooking) {
+                                                                        return (
+                                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '0.2rem 0.4rem', borderRadius: '8px' }}>
+                                                                                <span className="badge" style={{ color: '#6366f1', padding: '0', fontSize: '0.7rem', background: 'transparent' }}>
+                                                                                    {assignedBooking.employee?.name || 'Assigned'}
+                                                                                </span>
+                                                                                <button
+                                                                                    onClick={() => handleUnassignRide(assignedBooking.id)}
+                                                                                    title="Unassign"
+                                                                                    style={{ background: 'transparent', border: 'none', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '2px' }}
+                                                                                >
+                                                                                    <X size={12} />
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <button
+                                                                            onClick={() => { setAssignData({ ...assignData, routeId: r.id }); setShowAssignModal(true); }}
+                                                                            className="uber-btn-icon"
+                                                                            title="Assign Ride"
+                                                                            style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '0.4rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}
+                                                                        >
+                                                                            <Plus size={14} />
+                                                                        </button>
+                                                                    );
+                                                                })()}
 
-                                                                 <button
-                                                                     onClick={() => handleDeleteRoute(r.id)}
-                                                                     disabled={deleteLoading === r.id}
-                                                                     style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: '8px', padding: '0.4rem', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                                                 >
-                                                                     {deleteLoading === r.id
-                                                                         ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                                                                         : <Trash2 size={14} />}
-                                                                 </button>
-                                                             </div>
-                                                         </td>
+                                                                <button
+                                                                    onClick={() => handleDeleteRoute(r.id)}
+                                                                    disabled={deleteLoading === r.id}
+                                                                    style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: '8px', padding: '0.4rem', color: '#f43f5e', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                                                >
+                                                                    {deleteLoading === r.id
+                                                                        ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                                                                        : <Trash2 size={14} />}
+                                                                </button>
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
