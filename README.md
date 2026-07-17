@@ -12,7 +12,7 @@
 [![Kafka](https://img.shields.io/badge/Messaging-Kafka-231F20?logo=apachekafka)](https://kafka.apache.org/)
 [![Redis](https://img.shields.io/badge/Cache-Redis-DC382D?logo=redis)](https://redis.io/)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions)](.github/workflows/ci.yml)
-[![License](https://img.shields.io/badge/License-Proprietary-lightgrey)](#license)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [Overview](#overview) • [Architecture](#architecture) • [Roles & Access Model](#roles--access-model) • [Features](#features) • [Tech Stack](#tech-stack) • [Getting Started](#getting-started) • [API Reference](#api-reference) • [Security Notes](#security-notes--known-limitations) • [Testing & CI](#testing--ci)
 
@@ -340,6 +340,5 @@ EMPLOYEE-TRANSPORT-MANAGEMENT-SYSTEM/
 ---
 
 ## License
-
-Proprietary. All rights reserved.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
